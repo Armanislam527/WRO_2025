@@ -1,5 +1,6 @@
 #include <Servo.h>
 #include <Wire.h>
+// Include the specific header for the MPU6050 library functions
 #include <I2Cdev.h>
 #include <MPU6050.h>
 
@@ -8,30 +9,30 @@
 const int START_BUTTON_PIN = A3; // D17
 
 // IR Sensors
-const int IR_FRONT_LEFT_PIN = 6;   // D6
-const int IR_FRONT_RIGHT_PIN = 7;  // D7
-const int IR_RIGHT_45_PIN = 8;     // D8
-const int IR_LEFT_45_PIN = 9;      // D9
+const int IR_FRONT_LEFT_PIN = 6;  // D6
+const int IR_FRONT_RIGHT_PIN = 7; // D7
+const int IR_RIGHT_45_PIN = 8;    // D8
+const int IR_LEFT_45_PIN = 9;     // D9
 
 // Ultrasonic Sensors
-const int US_FRONT_TRIG_PIN = 2;   // D2
-const int US_FRONT_ECHO_PIN = 3;   // D3
-const int US_REAR_TRIG_PIN = 4;    // D4
-const int US_REAR_ECHO_PIN = 5;    // D5
+const int US_FRONT_TRIG_PIN = 2; // D2
+const int US_FRONT_ECHO_PIN = 3; // D3
+const int US_REAR_TRIG_PIN = 4;  // D4
+const int US_REAR_ECHO_PIN = 5;  // D5
 
 // Servo Motor
-const int SERVO_PIN = 10;          // D10
+const int SERVO_PIN = 10; // D10
 Servo steeringServo;
 
 // L298N Motor Driver Pins
 // Motor A (Left Motor)
-const int ENA_PIN = 11;            // D11
-const int IN1_PIN = 12;            // D12
-const int IN2_PIN = 13;            // D13
+const int ENA_PIN = 11; // D11
+const int IN1_PIN = 12; // D12
+const int IN2_PIN = 13; // D13
 // Motor B (Right Motor)
-const int ENB_PIN = A0;            // D14
-const int IN3_PIN = A1;            // D15
-const int IN4_PIN = A2;            // D16
+const int ENB_PIN = A0; // D14
+const int IN3_PIN = A1; // D15
+const int IN4_PIN = A2; // D16
 
 // MPU6050 IMU
 MPU6050 mpu;
@@ -55,9 +56,11 @@ int targetLeftSpeed = 0;
 int targetRightSpeed = 0;
 int targetServoAngle = 90; // Center
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
-  while (!Serial); // Wait for Serial Monitor (optional for debugging)
+  while (!Serial)
+    ; // Wait for Serial Monitor (optional for debugging)
 
   // Initialize Start Button Pin
   pinMode(START_BUTTON_PIN, INPUT_PULLUP);
@@ -91,22 +94,41 @@ void setup() {
 
   // Initialize MPU6050
   Wire.begin();
-  if (mpu.begin(MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G)) {
-    imuReady = true;
-    // Calibration might be needed here, but often not required for relative measurements
-    // mpu.calibrateGyro();
-    // mpu.setThreshold(3);
-  } else {
+  // Use the correct initialization function and constants for the library
+  if (mpu.initialize())
+  { // Use initialize() instead of begin()
+    // Check connection
+    if (mpu.testConnection())
+    {
+      imuReady = true;
+      // Set full scale range for gyro and accel
+      mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_2000); // Use library constant
+      mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);  // Use library constant
+      // Calibration might be needed here, but often not required for relative measurements
+      mpu.CalibrateAccel(6); // Optional: Perform calibration
+      mpu.CalibrateGyro(6);  // Optional: Perform calibration
+    }
+    else
+    {
+      imuReady = false;
+      Serial.println("MPU6050 connection failed");
+    }
+  }
+  else
+  {
     imuReady = false;
-    Serial.println("MPU6050 connection failed");
+    Serial.println("MPU6050 initialization failed");
   }
 }
 
-void loop() {
+void loop()
+{
   // --- 1. Check Start Button ---
-  if (digitalRead(START_BUTTON_PIN) == LOW && !startButtonPressed) {
+  if (digitalRead(START_BUTTON_PIN) == LOW && !startButtonPressed)
+  {
     delay(50); // Simple debounce
-    if (digitalRead(START_BUTTON_PIN) == LOW) {
+    if (digitalRead(START_BUTTON_PIN) == LOW)
+    {
       startButtonPressed = true;
       Serial.println("START"); // Send start signal to Pi
     }
@@ -114,20 +136,23 @@ void loop() {
 
   // --- 2. Read Sensors Periodically ---
   unsigned long currentMillis = millis();
-  if (currentMillis - lastSensorSendTime >= SENSOR_SEND_INTERVAL) {
+  if (currentMillis - lastSensorSendTime >= SENSOR_SEND_INTERVAL)
+  {
     readSensors();
     sendSensorData();
     lastSensorSendTime = currentMillis;
   }
 
   // --- 3. Check for Serial Commands from Pi ---
-  if (Serial.available() > 0) {
+  if (Serial.available() > 0)
+  {
     receivedCommand = Serial.readStringUntil('\n');
     parseAndExecuteCommand(receivedCommand);
   }
 
   // --- 4. Update Actuators if Run Started ---
-  if (runStarted) {
+  if (runStarted)
+  {
     updateMotors();
     updateServo();
   }
@@ -137,7 +162,8 @@ void loop() {
 
 // --- Function Definitions ---
 
-void readSensors() {
+void readSensors()
+{
   // Read IR Sensors
   irStates[0] = digitalRead(IR_FRONT_LEFT_PIN);
   irStates[1] = digitalRead(IR_FRONT_RIGHT_PIN);
@@ -149,22 +175,21 @@ void readSensors() {
   usDistances[1] = readUltrasonic(US_REAR_TRIG_PIN, US_REAR_ECHO_PIN);
 
   // Read MPU6050
-  if (imuReady) {
-    mpu.readRawAccel();
-    mpu.readRawGyro();
-    imuAccelX = mpu.getAccelX();
-    imuAccelY = mpu.getAccelY();
-    imuAccelZ = mpu.getAccelZ();
-    imuGyroX = mpu.getGyroX();
-    imuGyroY = mpu.getGyroY();
-    imuGyroZ = mpu.getGyroZ();
-  } else {
+  if (imuReady)
+  {
+    // Use the correct functions to read data from the MPU6050 library
+    mpu.getMotion6(&imuAccelX, &imuAccelY, &imuAccelZ, &imuGyroX, &imuGyroY, &imuGyroZ);
+    // The library functions read raw data directly into the variables
+  }
+  else
+  {
     imuAccelX = imuAccelY = imuAccelZ = 0;
     imuGyroX = imuGyroY = imuGyroZ = 0;
   }
 }
 
-long readUltrasonic(int trigPin, int echoPin) {
+long readUltrasonic(int trigPin, int echoPin)
+{
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
@@ -172,7 +197,8 @@ long readUltrasonic(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
 
   long duration = pulseIn(echoPin, HIGH, 30000); // 30ms timeout (~5m)
-  if (duration == 0) {
+  if (duration == 0)
+  {
     return -1; // Timeout or error
   }
   // Calculate distance in mm (speed of sound = 343 m/s)
@@ -183,58 +209,83 @@ long readUltrasonic(int trigPin, int echoPin) {
   return (duration * 1000) / 5824;
 }
 
-void sendSensorData() {
+void sendSensorData()
+{
   Serial.print("SENSORS,");
-  Serial.print(irStates[0]); Serial.print(",");
-  Serial.print(irStates[1]); Serial.print(",");
-  Serial.print(irStates[2]); Serial.print(",");
-  Serial.print(irStates[3]); Serial.print(",");
-  Serial.print(usDistances[0]); Serial.print(",");
-  Serial.print(usDistances[1]); Serial.print(",");
-  Serial.print(imuAccelX); Serial.print(",");
-  Serial.print(imuAccelY); Serial.print(",");
-  Serial.print(imuAccelZ); Serial.print(",");
-  Serial.print(imuGyroX); Serial.print(",");
-  Serial.print(imuGyroY); Serial.print(",");
+  Serial.print(irStates[0]);
+  Serial.print(",");
+  Serial.print(irStates[1]);
+  Serial.print(",");
+  Serial.print(irStates[2]);
+  Serial.print(",");
+  Serial.print(irStates[3]);
+  Serial.print(",");
+  Serial.print(usDistances[0]);
+  Serial.print(",");
+  Serial.print(usDistances[1]);
+  Serial.print(",");
+  Serial.print(imuAccelX);
+  Serial.print(",");
+  Serial.print(imuAccelY);
+  Serial.print(",");
+  Serial.print(imuAccelZ);
+  Serial.print(",");
+  Serial.print(imuGyroX);
+  Serial.print(",");
+  Serial.print(imuGyroY);
+  Serial.print(",");
   Serial.println(imuGyroZ);
 }
 
-void parseAndExecuteCommand(String command) {
+void parseAndExecuteCommand(String command)
+{
   command.trim();
-  if (command.startsWith("MOTOR")) {
+  if (command.startsWith("MOTOR"))
+  {
     int commaIndex1 = command.indexOf(',');
     int commaIndex2 = command.indexOf(',', commaIndex1 + 1);
-    if (commaIndex1 != -1 && commaIndex2 != -1) {
+    if (commaIndex1 != -1 && commaIndex2 != -1)
+    {
       String leftStr = command.substring(commaIndex1 + 1, commaIndex2);
       String rightStr = command.substring(commaIndex2 + 1);
       targetLeftSpeed = leftStr.toInt();
       targetRightSpeed = rightStr.toInt();
     }
-  } else if (command.startsWith("SERVO")) {
+  }
+  else if (command.startsWith("SERVO"))
+  {
     int commaIndex = command.indexOf(',');
-    if (commaIndex != -1) {
+    if (commaIndex != -1)
+    {
       String angleStr = command.substring(commaIndex + 1);
       targetServoAngle = angleStr.toInt();
       targetServoAngle = constrain(targetServoAngle, 0, 180);
     }
-  } else if (command.startsWith("ACK_START")) {
+  }
+  else if (command.startsWith("ACK_START"))
+  {
     runStarted = true;
     // Optionally acknowledge back or perform other actions
   }
   // Add other command handlers if needed
 }
 
-void updateMotors() {
+void updateMotors()
+{
   setMotor(ENA_PIN, IN1_PIN, IN2_PIN, targetLeftSpeed);  // Left Motor
   setMotor(ENB_PIN, IN3_PIN, IN4_PIN, targetRightSpeed); // Right Motor
 }
 
-void setMotor(int enPin, int in1Pin, int in2Pin, int speed) {
+void setMotor(int enPin, int in1Pin, int in2Pin, int speed)
+{
   speed = constrain(speed, -255, 255);
-  if (speed >= 0) {
+  if (speed >= 0)
+  {
     digitalWrite(in1Pin, HIGH);
     digitalWrite(in2Pin, LOW);
-  } else {
+  }
+  else
+  {
     digitalWrite(in1Pin, LOW);
     digitalWrite(in2Pin, HIGH);
     speed = -speed;
@@ -242,11 +293,13 @@ void setMotor(int enPin, int in1Pin, int in2Pin, int speed) {
   analogWrite(enPin, speed);
 }
 
-void updateServo() {
+void updateServo()
+{
   steeringServo.write(targetServoAngle);
 }
 
-void stopMotors() {
+void stopMotors()
+{
   digitalWrite(IN1_PIN, LOW);
   digitalWrite(IN2_PIN, LOW);
   digitalWrite(IN3_PIN, LOW);
