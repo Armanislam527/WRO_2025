@@ -95,29 +95,22 @@ void setup()
   // Initialize MPU6050
   Wire.begin();
   // Use the correct initialization function and constants for the library
-  if (mpu.initialize())
-  { // Use initialize() instead of begin()
-    // Check connection
-    if (mpu.testConnection())
-    {
-      imuReady = true;
-      // Set full scale range for gyro and accel
-      mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_2000); // Use library constant
-      mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);  // Use library constant
-      // Calibration might be needed here, but often not required for relative measurements
-      mpu.CalibrateAccel(6); // Optional: Perform calibration
-      mpu.CalibrateGyro(6);  // Optional: Perform calibration
-    }
-    else
-    {
-      imuReady = false;
-      Serial.println("MPU6050 connection failed");
-    }
+  mpu.initialize(); // initialize() returns void, not bool
+  // Check connection
+  if (mpu.testConnection())
+  {
+    imuReady = true;
+    // Set full scale range for gyro and accel
+    mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_2000); // Use library constant
+    mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);  // Use library constant
+    // Calibration might be needed here, but often not required for relative measurements
+    mpu.CalibrateAccel(6); // Optional: Perform calibration
+    mpu.CalibrateGyro(6);  // Optional: Perform calibration
   }
   else
   {
     imuReady = false;
-    Serial.println("MPU6050 initialization failed");
+    Serial.println("MPU6050 connection failed");
   }
 }
 

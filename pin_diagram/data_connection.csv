@@ -1,0 +1,51 @@
+﻿Nano Pin,Component,Function,Notes
+Power Connections (Breadboard Power Rails),,,
+5V,Breadboard + Rail,Power Supply (5V),From Buck Converter's 5V output. Caution: Ensure Nano's 5V regulator isn't overloaded if powering high-current devices directly from Nano's 5V pin.
+GND,Breadboard - Rail,Ground,"Common ground. Connect Buck Converter's GND, Battery -, and all device grounds here."
+VIN,Buck Converter +5V Out,Power Input (5V),Alternative to connecting to Nano's 5V pin directly. Often safer for higher current draw.
+MPU6050 IMU (I2C),,,
+A4 (SDA),MPU6050 SDA,I2C Data,Pull-up resistors might be needed (often built into breakout boards).
+A5 (SCL),MPU6050 SCL,I2C Clock,Pull-up resistors might be needed.
+5V,MPU6050 VCC,Power Supply (5V),Connect to Breadboard + Rail.
+GND,MPU6050 GND,Ground,Connect to Breadboard - Rail.
+Ultrasonic Sensors (x2),,,Example pins - adjust if conflicts arise.
+D2,Ultrasonic Sensor 1 Trig,Trigger Output,Output to initiate measurement.
+D3,Ultrasonic Sensor 1 Echo,Echo Input,Input to read measurement time.
+D4,Ultrasonic Sensor 2 Trig,Trigger Output,Output to initiate measurement.
+D5,Ultrasonic Sensor 2 Echo,Echo Input,Input to read measurement time.
+5V,All Ultrasonic Sensors VCC,Power Supply (5V),Connect to Breadboard + Rail.
+GND,All Ultrasonic Sensors GND,Ground,Connect to Breadboard - Rail.
+IR Sensors (x4),,,Digital read for line/object detection. Example pins.
+D6,IR Sensor 1 Output,Digital Input,Read sensor state (HIGH/LOW).
+D7,IR Sensor 2 Output,Digital Input,Read sensor state.
+D8,IR Sensor 3 Output,Digital Input,Read sensor state.
+D9,IR Sensor 4 Output,Digital Input,Read sensor state.
+5V,All IR Sensors VCC,Power Supply (5V),Connect to Breadboard + Rail.
+GND,All IR Sensors GND,Ground,Connect to Breadboard - Rail.
+Servo Motor (SG90),,,
+D10,SG90 Signal Wire,PWM Output (Servo Control),Controls steering angle.
+5V,SG90 Red Wire (V+),Power Supply (5V),Caution: Drawing servo current directly from Nano's 5V pin can be risky if the servo stalls or draws high current. Consider a separate 5V supply or ensure the buck converter can handle the combined load.
+GND,SG90 Brown/Black Wire (GND),Ground,Connect to Breadboard - Rail.
+L298N Motor Driver,,,Controls the two driving DC motors.
+D11,L298N ENA,PWM Output (Motor A Speed),Enable pin for Motor A (Left Motor).
+D12,L298N IN1,Digital Output (Motor A Direction),Input 1 for Motor A.
+D13,L298N IN2,Digital Output (Motor A Direction),Input 2 for Motor A.
+D14 (A0),L298N ENB,PWM Output (Motor B Speed),Enable pin for Motor B (Right Motor). Check if D14/D15 are available or use different pins.
+D15 (A1),L298N IN3,Digital Output (Motor B Direction),Input 3 for Motor B. Check pin availability.
+D16 (A2),L298N IN4,Digital Output (Motor B Direction),Input 4 for Motor B. Check pin availability.
+5V,L298N VCC1,Logic Power Supply (5V),Connect to Breadboard + Rail.
+GND,L298N GND,Logic Ground,Connect to Breadboard - Rail.
+,L298N VCC2,Motor Power Supply (+),Connect directly to Battery Pack +.
+,L298N GND (Motor Supply),Motor Power Supply (-),Connect directly to Battery Pack -. Ensure common ground with logic supply (connect battery - to breadboard -).
+,"L298N OUT1, OUT2",Motor A Terminals,Connect to terminals of Motor 1 (Left Driving Motor).
+,"L298N OUT3, OUT4",Motor B Terminals,Connect to terminals of Motor 2 (Right Driving Motor).
+Start Button,,,
+D17 (A3),Start Button (One Leg),Digital Input (Start Trigger),Use internal pull-up: "pinMode(startPin, INPUT_PULLUP);". Other leg connects to GND.
+GND,Start Button (Other Leg),Ground,Connect to Breadboard - Rail.
+Power-On Switch,,,
+,Power Switch (One Leg),Battery Connection,Connect in series with the positive lead from the Battery Pack to the Buck Converter's Input +.
+,Power Switch (Other Leg),Battery Connection,Connects to Battery Pack +.
+UART Communication (Nano <-> Pi Zero 2W),,,Ensure common ground.
+D0 (RXD),Pi Zero 2W GPIO 14 (TXD),Serial Receive (from Pi),Connect Pi's TX to Nano's RX.
+D1 (TXD),Pi Zero 2W GPIO 15 (RXD),Serial Transmit (to Pi),Connect Nano's TX to Pi's RX.
+GND,Pi Zero 2W GND Pin,Common Ground,Essential for UART communication. Connect Pi GND to Breadboard - Rail.
