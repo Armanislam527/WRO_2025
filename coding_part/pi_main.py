@@ -77,17 +77,22 @@ cap = None
 def initialize_camera():
     global cap
     try:
-        cap = cv2.VideoCapture(CAMERA_INDEX)
+        cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_V4L2)
         if not cap.isOpened():
-            logger.error("Error: Could not open USB camera.")
+            logger.error(f"Error: Could not open USB camera (index: {CAMERA_INDEX}). isOpened() returned False.")
             return False
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
         cap.set(cv2.CAP_PROP_FPS, FRAME_RATE)
-        logger.info(f"Camera initialized (Index: {CAMERA_INDEX}, Res: {FRAME_WIDTH}x{FRAME_HEIGHT})")
+        time.sleep(0.1)
+        actual_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        actual_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        actual_fps = cap.get(cv2.CAP_PROP_FPS)
+        logger.info(f"Camera reports: Width: {actual_width}, Height: {actual_height}, FPS: {actual_fps}")
+        logger.info(f"Camera initialized (Index: {CAMERA_INDEX}, Res: {FRAME_WIDTH}x{FRAME_HEIGHT} @ {actual_fps} FPS)")
         return True
     except Exception as e:
-        logger.error(f"Error initializing camera: {e}")
+        logger.error(f"Error initializing camera: {e}", exc_info=True)
         return False
 
 
