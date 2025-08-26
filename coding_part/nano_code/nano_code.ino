@@ -1,35 +1,24 @@
 #include <Servo.h>
 #include <Wire.h>
-// Include the specific header for the MPU6050 library functions
 #include <I2Cdev.h>
 #include <MPU6050.h>
 
 // --- Pin Definitions ---
-// Start Button
-const int START_BUTTON_PIN = A3; // D17
-
-// IR Sensors
+const int START_BUTTON_PIN = A3;  // D17
 const int IR_FRONT_LEFT_PIN = 6;  // D6
 const int IR_FRONT_RIGHT_PIN = 7; // D7
 const int IR_RIGHT_45_PIN = 8;    // D8
 const int IR_LEFT_45_PIN = 9;     // D9
-
-// Ultrasonic Sensors
-const int US_FRONT_TRIG_PIN = 2; // D2
-const int US_FRONT_ECHO_PIN = 3; // D3
-const int US_REAR_TRIG_PIN = 4;  // D4
-const int US_REAR_ECHO_PIN = 5;  // D5
-
-// Servo Motor
-const int SERVO_PIN = 10; // D10
+const int US_FRONT_TRIG_PIN = 2;  // D2
+const int US_FRONT_ECHO_PIN = 3;  // D3
+const int US_REAR_TRIG_PIN = 4;   // D4
+const int US_REAR_ECHO_PIN = 5;   // D5
+const int SERVO_PIN = 10;         // D10
 Servo steeringServo;
-
 // L298N Motor Driver Pins
-// Motor A (Left Motor)
 const int ENA_PIN = 11; // D11
 const int IN1_PIN = 12; // D12
 const int IN2_PIN = 13; // D13
-// Motor B (Right Motor)
 const int ENB_PIN = A0; // D14
 const int IN3_PIN = A1; // D15
 const int IN4_PIN = A2; // D16
@@ -39,8 +28,8 @@ MPU6050 mpu;
 bool imuReady = false;
 
 // --- Variables ---
-bool startButtonPressed = false;
-bool runStarted = false;
+bool startButtonPressed = false; // Tracks if button was physically pressed
+bool runStarted = false;         // Flag to control main driving loop
 unsigned long lastSensorSendTime = 0;
 const long SENSOR_SEND_INTERVAL = 100; // Send sensor data every 100ms
 
@@ -60,86 +49,70 @@ void setup()
 {
   Serial.begin(115200);
   while (!Serial)
-    ; // Wait for Serial Monitor (optional for debugging)
+    ; // Wait for Serial Monitor (important for reliable startup)
 
-  // Initialize Start Button Pin
+  // Initialize Pins
   pinMode(START_BUTTON_PIN, INPUT_PULLUP);
-
-  // Initialize IR Sensor Pins
   pinMode(IR_FRONT_LEFT_PIN, INPUT);
   pinMode(IR_FRONT_RIGHT_PIN, INPUT);
   pinMode(IR_RIGHT_45_PIN, INPUT);
   pinMode(IR_LEFT_45_PIN, INPUT);
-
-  // Initialize Ultrasonic Sensor Pins
   pinMode(US_FRONT_TRIG_PIN, OUTPUT);
   pinMode(US_FRONT_ECHO_PIN, INPUT);
   pinMode(US_REAR_TRIG_PIN, OUTPUT);
   pinMode(US_REAR_ECHO_PIN, INPUT);
-
-  // Initialize L298N Pins
   pinMode(ENA_PIN, OUTPUT);
   pinMode(IN1_PIN, OUTPUT);
   pinMode(IN2_PIN, OUTPUT);
   pinMode(ENB_PIN, OUTPUT);
   pinMode(IN3_PIN, OUTPUT);
   pinMode(IN4_PIN, OUTPUT);
-
-  // Initialize Servo
   steeringServo.attach(SERVO_PIN);
   steeringServo.write(targetServoAngle);
-
-  // Initialize Motors to STOP
-  stopMotors();
+  stopMotors(); // Ensure motors are off at start
 
   // Initialize MPU6050
   Wire.begin();
-  // Use the correct initialization function and constants for the library
-  mpu.initialize(); // initialize() returns void, not bool
-  // Check connection
+  mpu.initialize();
   if (mpu.testConnection())
   {
     imuReady = true;
-    // Set full scale range for gyro and accel
-    mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_2000); // Use library constant
-    mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);  // Use library constant
-    // Calibration might be needed here, but often not required for relative measurements
-    mpu.CalibrateAccel(6); // Optional: Perform calibration
-    mpu.CalibrateGyro(6);  // Optional: Perform calibration
+    mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_2000);
+    mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
+    // Optional calibration
+    mpu.CalibrateAccel(6);
+    mpu.CalibrateGyro(6);
   }
   else
   {
     imuReady = false;
     Serial.println("MPU6050 connection failed");
   }
+  // Small delay after setup to stabilize
+  delay(100);
+  Serial.println("Nano Initialized and Ready");
 }
 
 void loop()
 {
-  // --- 1. Check Start Button ---
-  // --- 1. Check Start Button (MODIFIED FOR MULTIPLE PRESSES) ---
-// Check if the button is pressed (LOW due to INPUT_PULLUP)
-if (digitalRead(START_BUTTON_PIN) == LOW) {
-  // Simple debounce delay
-  delay(50);
-  // Re-check if the button is still pressed after debounce delay
-  if (digitalRead(START_BUTTON_PIN) == LOW) {
-    // Button is confirmed pressed
-    // Send the START command immediately
-    Serial.println("START"); // Send start signal to Pi
-    Serial.flush(); // Ensure the message is sent before potentially processing further
+  // --- 1. Check Start Button (Robust Single Press Detection) ---
+  if (digitalRead(START_BUTTON_PIN) == LOW && !startButtonPressed)
+  {
+    delay(50); // Debounce delay
+    if (digitalRead(START_BUTTON_PIN) == LOW)
+    {
+      startButtonPressed = true; // Mark button as pressed
+      Serial.println("START");   // Send START signal to Pi
+      Serial.flush();            // Ensure it's sent immediately
 
-    // Wait for the button to be released to avoid multiple rapid triggers
-    // This creates a "single press = single START" behavior per physical press-release cycle
-    while(digitalRead(START_BUTTON_PIN) == LOW) {
-      delay(10); // Small delay while waiting for release
+      // Wait for button release to prevent multiple triggers
+      while (digitalRead(START_BUTTON_PIN) == LOW)
+      {
+        delay(10);
+      }
+      delay(50); // Extra debounce after release
     }
-    // Optional: Add a small delay after release to prevent accidental re-triggering
-    // if the button has mechanical bounce on release.
-    delay(50); // Additional debounce after release
   }
-}
-// --- End Modified Start Button Check ---
 
   // --- 2. Read Sensors Periodically ---
   unsigned long currentMillis = millis();
@@ -154,7 +127,17 @@ if (digitalRead(START_BUTTON_PIN) == LOW) {
   if (Serial.available() > 0)
   {
     receivedCommand = Serial.readStringUntil('\n');
-    parseAndExecuteCommand(receivedCommand);
+    receivedCommand.trim();
+    if (receivedCommand == "ACK_START")
+    {
+      // Pi acknowledged the START. Enable the main driving loop.
+      runStarted = true;
+      Serial.println("ACK_START received, runStarted = true");
+    }
+    else
+    {
+      parseAndExecuteCommand(receivedCommand);
+    }
   }
 
   // --- 4. Update Actuators if Run Started ---
@@ -168,25 +151,17 @@ if (digitalRead(START_BUTTON_PIN) == LOW) {
 }
 
 // --- Function Definitions ---
-
 void readSensors()
 {
-  // Read IR Sensors
   irStates[0] = digitalRead(IR_FRONT_LEFT_PIN);
   irStates[1] = digitalRead(IR_FRONT_RIGHT_PIN);
   irStates[2] = digitalRead(IR_RIGHT_45_PIN);
   irStates[3] = digitalRead(IR_LEFT_45_PIN);
-
-  // Read Ultrasonic Sensors
   usDistances[0] = readUltrasonic(US_FRONT_TRIG_PIN, US_FRONT_ECHO_PIN);
   usDistances[1] = readUltrasonic(US_REAR_TRIG_PIN, US_REAR_ECHO_PIN);
-
-  // Read MPU6050
   if (imuReady)
   {
-    // Use the correct functions to read data from the MPU6050 library
     mpu.getMotion6(&imuAccelX, &imuAccelY, &imuAccelZ, &imuGyroX, &imuGyroY, &imuGyroZ);
-    // The library functions read raw data directly into the variables
   }
   else
   {
@@ -202,18 +177,12 @@ long readUltrasonic(int trigPin, int echoPin)
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
-
-  long duration = pulseIn(echoPin, HIGH, 30000); // 30ms timeout (~5m)
+  long duration = pulseIn(echoPin, HIGH, 30000); // 30ms timeout
   if (duration == 0)
   {
     return -1; // Timeout or error
   }
-  // Calculate distance in mm (speed of sound = 343 m/s)
-  // duration is in microseconds, distance = (duration / 2) * speed_of_sound
-  // speed_of_sound = 343000 mm/s, so distance (mm) = duration * 0.1715
-  // Simplified: duration / 58.24 for cm, or duration / 582.4 for mm
-  // Using integer math: (duration * 1000) / 5824
-  return (duration * 1000) / 5824;
+  return (duration * 1000) / 5824; // Convert to mm
 }
 
 void sendSensorData()
@@ -269,18 +238,13 @@ void parseAndExecuteCommand(String command)
       targetServoAngle = constrain(targetServoAngle, 0, 180);
     }
   }
-  else if (command.startsWith("ACK_START"))
-  {
-    runStarted = true;
-    // Optionally acknowledge back or perform other actions
-  }
-  // Add other command handlers if needed
+  // Note: ACK_START is handled in the main loop now
 }
 
 void updateMotors()
 {
-  setMotor(ENA_PIN, IN1_PIN, IN2_PIN, targetLeftSpeed);  // Left Motor
-  setMotor(ENB_PIN, IN3_PIN, IN4_PIN, targetRightSpeed); // Right Motor
+  setMotor(ENA_PIN, IN1_PIN, IN2_PIN, targetLeftSpeed);
+  setMotor(ENB_PIN, IN3_PIN, IN4_PIN, targetRightSpeed);
 }
 
 void setMotor(int enPin, int in1Pin, int in2Pin, int speed)
