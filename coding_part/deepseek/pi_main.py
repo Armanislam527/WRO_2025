@@ -82,13 +82,16 @@ cap = None
 def initialize_serial():
     global ser
     try:
+        if ser and ser.is_open:
+            ser.close()
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
         logger.info(f"Connected to Arduino Nano on {SERIAL_PORT}")
         return True
     except Exception as e:
         logger.error(f"Serial initialization failed: {e}")
         return False
-
 def initialize_camera():
     global cap
     try:
@@ -110,8 +113,17 @@ def initialize_camera():
 
 def send_command_to_nano(command_str):
     global ser
+    # Add to your main loop:
     if ser is None or not ser.is_open:
-        return
+        if time.time() - last_serial_attempt > 5.0:  # Try every 5 seconds
+            logger.info("Attempting to reconnect to Arduino...")
+            if initialize_serial():
+                # Reset state after reconnection
+                state = STATE_WAITING_FOR_START
+                lap_count = 0
+                turn_count = 0
+            last_serial_attempt = time.time()
+        continue
     
     try:
         ser.write((command_str + '\n').encode('utf-8'))
@@ -123,18 +135,32 @@ def send_command_to_nano(command_str):
             ser = None
         except:
             pass
+    # In Pi main loop:
+    last_heartbeat = time.time()
+    heartbeat_interval = 1.0  # Send heartbeat every second
+    
+    if time.time() - last_heartbeat > heartbeat_interval:
+        send_command_to_nano("PING")
+        last_heartbeat = time.time()
 
 def parse_sensor_data(data_str):
     global ir_sensor_states, ultrasonic_distances_mm, imu_data_raw
     try:
+        # Clean the input string
+        data_str = data_str.strip()
+        if not data_str.startswith("SENSORS"):
+            return
+            
         parts = data_str.split(',')
-        if len(parts) >= 13 and parts[0] == "SENSORS":
+        if len(parts) >= 13:
+            # Validate all values are integers
             ir_sensor_states = [int(parts[i]) for i in range(1, 5)]
             ultrasonic_distances_mm = [int(parts[i]) for i in range(5, 7)]
             imu_data_raw = [int(parts[i]) for i in range(7, 13)]
+        else:
+            logger.warning(f"Incomplete sensor data: {data_str}")
     except Exception as e:
-        logger.warning(f"Sensor data parsing error: {e}")
-
+        logger.warning(f"Sensor data parsing error: {e}, Data: {data_str}")
 def detect_signs(hsv_frame):
     # Detect red signs
     red_mask1 = cv2.inRange(hsv_frame, LOWER_RED1, UPPER_RED1)
@@ -453,6 +479,7 @@ def main():
                 if ser and ser.in_waiting > 0:
                     line = ser.readline().decode('utf-8').rstrip()
                     if line:
+                        logger.debug(f"Received from Nano: {line}")
                         if line == "START" and state == STATE_WAITING_FOR_START:
                             logger.info("Start signal received")
                             send_command_to_nano("ACK_START")
