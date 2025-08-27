@@ -96,23 +96,29 @@ void setup()
 void loop()
 {
   // --- 1. Check Start Button (Robust Single Press Detection) ---
-  if (digitalRead(START_BUTTON_PIN) == LOW && !startButtonPressed)
-  {
-    delay(50); // Debounce delay
-    if (digitalRead(START_BUTTON_PIN) == LOW)
-    {
-      startButtonPressed = true; // Mark button as pressed
-      Serial.println("START");   // Send START signal to Pi
-      Serial.flush();            // Ensure it's sent immediately
+  // --- 1. Check Start Button (MODIFIED FOR MULTIPLE PRESSES) ---
+// Check if the button is pressed (LOW due to INPUT_PULLUP)
+if (digitalRead(START_BUTTON_PIN) == LOW) {
+  // Simple debounce delay
+  delay(50);
+  // Re-check if the button is still pressed after debounce delay
+  if (digitalRead(START_BUTTON_PIN) == LOW) {
+    // Button is confirmed pressed
+    // Send the START command immediately
+    Serial.println("START"); // Send start signal to Pi
+    Serial.flush(); // Ensure the message is sent before potentially processing further
 
-      // Wait for button release to prevent multiple triggers
-      while (digitalRead(START_BUTTON_PIN) == LOW)
-      {
-        delay(10);
-      }
-      delay(50); // Extra debounce after release
+    // Wait for the button to be released to avoid multiple rapid triggers
+    // This creates a "single press = single START" behavior per physical press-release cycle
+    while(digitalRead(START_BUTTON_PIN) == LOW) {
+      delay(10); // Small delay while waiting for release
     }
+    // Optional: Add a small delay after release to prevent accidental re-triggering
+    // if the button has mechanical bounce on release.
+    delay(50); // Additional debounce after release
   }
+}
+// --- End Modified Start Button Check ---
 
   // --- 2. Read Sensors Periodically ---
   unsigned long currentMillis = millis();
