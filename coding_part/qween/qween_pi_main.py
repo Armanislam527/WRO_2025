@@ -36,7 +36,8 @@ LOWER_GREEN = np.array([40, 100, 100])
 UPPER_GREEN = np.array([80, 255, 255])
 LOWER_MAGENTA = np.array([130, 100, 100])
 UPPER_MAGENTA = np.array([160, 255, 255])
-
+gyro_bias_z = 0.0
+is_gyro_calibrated = False
 BASE_SPEED = 65
 MAX_SPEED = 90
 MIN_SPEED = 25
@@ -60,6 +61,8 @@ parking_sequence_step = 0
 start_time = None
 run_acknowledged = False
 start_signal_received_flag = False
+previous_lane_error = 0.0
+last_control_time = time.time() # Initialize appropriately
 
 ir_sensor_states = [1, 1, 1, 1]
 ultrasonic_distances_mm = [9999, 9999]
@@ -81,6 +84,19 @@ def initialize_serial():
     except Exception as e:
         logger.error(f"Failed to connect to serial port {SERIAL_PORT}: {e}")
         return False
+def calibrate_gyro():
+    global gyro_bias_z, is_gyro_calibrated, imu_data_raw, serial_lock
+    logger.info("Calibrating Gyro...")
+    calibration_samples = 100
+    bias_sum = 0.0
+    for _ in range(calibration_samples):
+        with serial_lock: # Ensure we get the latest data
+            current_gyro_z = imu_data_raw[5]
+        bias_sum += current_gyro_z
+        time.sleep(0.01) # Small delay between samples
+    gyro_bias_z = bias_sum / calibration_samples
+    is_gyro_calibrated = True
+    logger.info(f"Gyro Calibrated. Bias Z: {gyro_bias_z}")
 
 def send_command_to_nano(command_char, value=None):
     if not ser or not ser.is_open:
@@ -159,9 +175,13 @@ def initialize_camera():
         return None
 
 def update_lap_count(gyro_z_rate):
-    global turn_count, last_turn_integral, gyro_z_history, lap_count
+    global turn_count, last_turn_integral, gyro_z_history, lap_count, gyro_bias_z, is_gyro_calibrated
     GYRO_SENSITIVITY_DPS_PER_LSB = 131.0
-    gyro_z_dps = gyro_z_rate / GYRO_SENSITIVITY_DPS_PER_LSB
+    corrected_gyro_z_rate = gyro_z_rate
+    if is_gyro_calibrated:
+        corrected_gyro_z_rate = gyro_z_rate - gyro_bias_z
+
+    gyro_z_dps = corrected_gyro_z_rate / GYRO_SENSITIVITY_DPS_PER_LSB
     gyro_z_history.append(gyro_z_dps)
     dt = 0.05
     current_integral = sum(gyro_z_history) * dt / len(gyro_z_history) if len(gyro_z_history) > 0 else 0
@@ -223,13 +243,13 @@ def detect_track_features(frame):
                 x, y, w_rect, h_rect = cv2.boundingRect(cnt)
                 aspect_ratio = float(w_rect) / h_rect
                 if 0.7 < aspect_ratio < 1.3:
-                     M = cv2.moments(cnt)
-                     if M["m00"] != 0:
-                         cx = int(M["m10"] / M["m00"])
-                         cy = int(M["m01"] / M["m00"])
-                         position = "left" if cx < center_x else "right"
-                         sign_info = {'type': 'red', 'position': position, 'cx': cx, 'cy': cy, 'area': area}
-                         break
+                    M = cv2.moments(cnt)
+                    if M["m00"] != 0:
+                        cx = int(M["m10"] / M["m00"])
+                        cy = int(M["m01"] / M["m00"])
+                        position = "left" if cx < center_x else "right"
+                        sign_info = {'type': 'red', 'position': position, 'cx': cx, 'cy': cy, 'area': area}
+                        break
         if sign_info is None:
             green_contours, _ = cv2.findContours(green_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             for cnt in green_contours:
@@ -292,8 +312,13 @@ def calculate_control_commands(lane_error, sign_info, parking_info):
         motor_speed = 0
         steering_angle = 90
     elif state == STATE_DRIVING_LAPS:
+        current_time = time.time()
+        dt = current_time - last_control_time
+        if dt <= 0: dt = 0.01 # Prevent division by zero
         p_term = STEERING_P_GAIN * lane_error
-        d_term = 0
+        d_term = STEERING_D_GAIN * (lane_error - last_lane_error) / dt
+        last_lane_error = lane_error
+        last_control_time = current_time
         steering_adjustment = p_term + d_term
         steering_angle = 90 + steering_adjustment
         steering_angle = np.clip(steering_angle, 45, 135)
@@ -393,6 +418,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 def main():
+    loop_start_time = time.time()
     global state, lap_count, start_time, run_acknowledged, start_signal_received_flag
     logger.info("Initializing WRO 2025 Car Controller (Pi Side)...")
     if not initialize_serial():
@@ -400,6 +426,8 @@ def main():
         return
     serial_thread = threading.Thread(target=serial_reader_thread, daemon=True)
     serial_thread.start()
+    time.sleep(0.5) # Give serial reader time to get initial data
+    calibrate_gyro() # Add this line
     logger.info("Serial reader thread started.")
     cap = initialize_camera()
     if cap is None:
@@ -431,13 +459,16 @@ def main():
                 continue
             lane_error, sign_info, parking_info = detect_track_features(frame)
             if state == STATE_DRIVING_LAPS and lap_count >= REQUIRED_LAPS:
-                 logger.info("*** THREE LAPS COMPLETED! Initiating Parking Sequence. ***")
-                 state = STATE_PARKING_SEARCH
-                 parking_sequence_step = 0
+                logger.info("*** THREE LAPS COMPLETED! Initiating Parking Sequence. ***")
+                state = STATE_PARKING_SEARCH
+                parking_sequence_step = 0
             motor_speed, servo_angle = calculate_control_commands(lane_error, sign_info, parking_info)
             send_command_to_nano('M', motor_speed)
             send_command_to_nano('S', servo_angle)
-            time.sleep(0.05)
+            loop_end_time = time.time()
+            loop_duration = loop_end_time - loop_start_time
+            desired_loop_duration = 0.05
+            time.sleep(max(0, desired_loop_duration - loop_duration))
     except Exception as e:
         logger.error(f"An unexpected error occurred in main loop: {e}", exc_info=True)
     finally:
