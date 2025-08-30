@@ -347,73 +347,77 @@ Once hardware is assembled and software is installed/flashed, follow these steps
 
 ## 5. Repository Structure
 
-This repository is organized to provide clear separation and easy access to the different components of our WRO 2025 vehicle project. Understanding this structure is key to navigating the code and documentation.
-WRO_2025/
-├── LICENSE # Repository license (e.g., MIT, GPL)
-├── README.md # This comprehensive documentation file.
-├── .gitignore # (Recommended) Specifies intentionally untracked files to ignore (e.g., \*.pyc, pycache/).
-├── rulebook/ # Official WRO 2025 rule documents for reference.
-│ ├── WRO-2025-Future-Engineers-Self-Driving-Cars-General-Rules.pdf
-│ └── ... (other rule documents)
-├── nano_brain/ # Core Arduino Nano code for real-time control.
-│ └── nano_brain.ino # Main Arduino sketch. Contains sensor reading, actuator control, serial communication.
-├── coding_part/ # Raspberry Pi Zero 2W code and related scripts.
-│ ├── pi_main.py # Primary Python script for high-level control, vision, strategy.
-│ ├── rpi.py # (If this is an older/duplicate version, consider deleting or clarify its purpose)
-│ ├── color_detection.py # (If used) Dedicated module for specific CV tasks like color filtering.
-│ ├── arnano.cpp # (Appears to be a C++ version or duplicate, clarify or remove if obsolete)
-│ ├── arnano/ # (Contains arnano.ino, likely obsolete/duplicate, clarify/remove)
-│ │ └── arnano.ino
-│ ├── deepseek/ # (Appears to be experimental/older code versions, clarify/remove)
-│ │ ├── nano_code/ # (Contains nano_code.ino, likely obsolete/duplicate)
-│ │ │ └── nano_code.ino
-│ │ ├── pi_main.py # (Likely an older/duplicate version)
-│ │ └── ...
-│ ├── perplexity/ # (Appears to be experimental/older code versions, clarify/remove)
-│ │ ├── nano_code/ # (Contains nano_code.ino, likely obsolete/duplicate)
-│ │ │ └── nano_code.ino
-│ │ └── pi_main.py # (Likely an older/duplicate version)
-│ ├── qween/ # (Appears to be experimental/older code versions, clarify/remove)
+This repository is organized to provide clear separation and easy access to the different components of our WRO 2025 vehicle project. Understanding this structure is key to navigating the code and documentation.<br>
+WRO_2025/<br>
+├── LICENSE # Repository license (e.g., MIT, GPL)<br>
+├── README.md # This comprehensive documentation file.<br>
+
+├── .gitignore # (Recommended) Specifies intentionally untracked files to ignore (e.g., \*.pyc, pycache/).<br>
+
+├── rulebook/ # Official WRO 2025 rule documents for reference.<br>
+│ ├── WRO-2025-Future-Engineers-Self-Driving-Cars-General-Rules.pdf<br>
+│ └── ... (other rule documents)<br>
+├── nano_brain/ # Core Arduino Nano code for real-time control.<br>
+│ └── nano_brain.ino # Main Arduino sketch. Contains sensor reading, actuator control, serial communication.<br>
+├── coding_part/ # Raspberry Pi Zero 2W code and related scripts.<br>
+│ ├── pi_main.py # Primary Python script for high-level control, vision, strategy.<br>
+│ ├── rpi.py # (If this is an older/duplicate version, consider deleting or clarify its purpose)<br>
+│ ├── color_detection.py # (If used) Dedicated module for specific CV tasks like color filtering.<br>
+│ ├── arnano.cpp # (Appears to be a C++ version or duplicate, clarify or remove if obsolete)<br>
+│ ├── arnano/ # (Contains arnano.ino, likely obsolete/duplicate, clarify/remove)<br>
+│ │ └── arnano.ino<br>
+│ ├── deepseek/ # (Appears to be experimental/older code versions, clarify/remove)<br>
+│ │ ├── nano_code/ # (Contains nano_code.ino, likely obsolete/duplicate)<br>
+│ │ │ └── nano_code.ino<br>
+│ │ ├── pi_main.py # (Likely an older/duplicate version)<br>
+│ │ └── ...<br>
+│ ├── perplexity/ # (Appears to be experimental/older code versions, clarify/remove)<br>
+│ │ ├── nano_code/ # (Contains nano_code.ino, likely obsolete/duplicate)<br>
+│ │ │ └── nano_code.ino<br>
+│ │ └── pi_main.py # (Likely an older/duplicate version)<br>
+│ ├── qween/ # (Appears to be experimental/older code versions, clarify/remove)<br>
 │ │ └── qween_pi_main.py # (Likely an older/duplicate version)
-│ └── wro-car # (Unclear purpose, clarify. If a service script, consider moving to a 'scripts/' dir)
-├── pin_diagram/ # Visual and data files detailing electronic connections.
-│ ├── nano_pin_diagram.webp # Visual representation of Nano wiring.
-│ ├── pi_zero_pinou.png # Visual representation of Pi wiring (note typo in filename).
-│ ├── data_connection.csv # Tabular data mapping signal names to specific pins.
-│ ├── visual_diagram.jpg # (Optional) Another visual aid if needed.
-│ └── power_source.csv # Details on power distribution (battery, regulators, connections).
-├── Pictures/ # Images crucial for documentation and team identity.
-│ ├── team_photo.jpg # Mandatory team photo as per WRO rules.
-│ ├── arman.jpeg # Individual team member photos.
-│ ├── labib.jpg
-│ ├── rohit.jpeg
-│ ├── shammo.jpg
-│ ├── team_in_action.jpg # (Recommended) Action shot of the team/vehicle.
-│ ├── vehicle_front_view.jpg # (Recommended) Clear photo of the front.
-│ ├── vehicle_rear_view.jpg # (Recommended) Clear photo of the rear.
-│ ├── vehicle_side_view.jpg # (Recommended) Clear photo of the side.
-│ ├── vehicle_top_view.jpg # (Recommended) Clear photo from above.
-│ ├── vehicle_bottom_view.jpg # (Recommended) Clear photo from below.
-│ ├── detail_steering.jpg # (Recommended) Close-up of steering mechanism.
-│ ├── detail_sensor_mount.jpg # (Recommended) Close-up of sensor mounting.
-│ └── testing.jpg # (Existing) Photo from development/testing.
-├── RC Chassis/ # 3D models and prints for the custom chassis and components.
-│ ├── frame.stl # Main chassis frame STL file.
-│ ├── frame.gcode # GCODE for 3D printing the frame.
-│ ├── front_wheeler.stl # STL for front wheel assembly (if custom).
-│ ├── Control arm.stl # STL for suspension/control arm (if custom).
-│ ├── Servo mount.stl # STL for the steering servo mount.
-│ ├── Motor mount A.stl # STL for one type of motor mount.
-│ ├── Motor mount B.stl # STL for another type of motor mount (if needed).
-│ ├── Rim.stl / Rim no support needed.stl # STL for wheel rims.
-│ ├── Tire.stl # STL for tire tread (if custom/printed).
-│ ├── Hub.stl # STL for wheel hub.
-│ ├── ... (other .stl/.gcode files for specific chassis parts)
-│ └── CURA_OUTPUT/ # (Optional) Folder containing sliced GCODE files if generated by Cura.
-├── scripts/ # (Optional but Recommended) Utility scripts for setup, deployment, etc.
-│ └── setup_pi.sh # (Example) Script to automate Pi software installation.
-└── docs/ # (Optional) Additional detailed documentation files (e.g., design notes, meeting logs - though main doc is README.md).
-└── (future detailed design docs could go here)
+<br>│ └── wro-car # (Unclear purpose, clarify. If a service script, consider moving to a 'scripts/' dir)
+<br>├── pin_diagram/ # Visual and data files detailing electronic connections.
+<br>│ ├── nano_pin_diagram.webp # Visual representation of Nano wiring.
+<br>│ ├── pi_zero_pinou.png # Visual representation of Pi wiring (note typo in filename).
+<br>│ ├── data_connection.csv # Tabular data mapping signal names to specific pins.
+<br>│ ├── visual_diagram.jpg # (Optional) Another visual aid if needed.
+<br>│ └── power_source.csv # Details on power distribution (battery, regulators, connections).
+<br>├── Pictures/ # Images crucial for documentation and team identity.
+<br>│ ├── team_photo.jpg # Mandatory team photo as per WRO rules.
+<br>│ ├── arman.jpeg # Individual team member photos.
+<br>│ ├── labib.jpg
+<br>│ ├── rohit.jpeg
+<br>│ ├── shammo.jpg
+
+<!-- <br>│ ├── team_in_action.jpg # (Recommended) Action shot of the team/vehicle. -->
+<!-- <br>│ ├── vehicle_front_view.jpg # (Recommended) Clear photo of the front. -->
+<!-- <br>│ ├── vehicle_rear_view.jpg # (Recommended) Clear photo of the rear. -->
+<!-- <br>│ ├── vehicle_side_view.jpg # (Recommended) Clear photo of the side. -->
+<!-- <br>│ ├── vehicle_top_view.jpg # (Recommended) Clear photo from above. -->
+<!-- <br>│ ├── vehicle_bottom_view.jpg # (Recommended) Clear photo from below. -->
+<!-- <br>│ ├── detail_steering.jpg # (Recommended) Close-up of steering mechanism. -->
+<!-- <br>│ ├── detail_sensor_mount.jpg # (Recommended) Close-up of sensor mounting. -->
+
+<br>│ └── testing.jpg # (Existing) Photo from development/testing.
+<br>├── RC Chassis/ # 3D models and prints for the custom chassis and components.
+<br>│ ├── frame.stl # Main chassis frame STL file.
+<br>│ ├── frame.gcode # GCODE for 3D printing the frame.
+<br>│ ├── front_wheeler.stl # STL for front wheel assembly (if custom).
+<br>│ ├── Control arm.stl # STL for suspension/control arm (if custom).
+<br>│ ├── Servo mount.stl # STL for the steering servo mount.
+<br>│ ├── Motor mount A.stl # STL for one type of motor mount.
+<br>│ ├── Motor mount B.stl # STL for another type of motor mount (if needed).
+<br>│ ├── Rim.stl / Rim no support needed.stl # STL for wheel rims.
+<br>│ ├── Tire.stl # STL for tire tread (if custom/printed).
+<br>│ ├── Hub.stl # STL for wheel hub.
+<br>│ ├── ... (other .stl/.gcode files for specific chassis parts)
+<br>│ └── CURA_OUTPUT/ # (Optional) Folder containing sliced GCODE files if generated by Cura.
+<br>├── scripts/ # (Optional but Recommended) Utility scripts for setup, deployment, etc.
+<br>│ └── setup_pi.sh # (Example) Script to automate Pi software installation.
+<br>└── docs/ # (Optional) Additional detailed documentation files (e.g., design notes, meeting logs - though main doc is README.md).
+<br>└── (future detailed design docs could go here)
 
 **Note on Code Organization:** The `coding_part/` directory currently contains several files and subdirectories that appear to be duplicates, older versions, or experimental branches (e.g., `deepseek/`, `perplexity/`, `qween/`, multiple `nano_code/` folders, `arnano.*`). For clarity and adherence to WRO's expectation of a clean, understandable repository, it is highly recommended to:
 
@@ -446,3 +450,30 @@ This repository is a testament to our team's iterative development approach and 
     -   Adaptations based on real-world testing feedback.
 
 By maintaining this detailed and progressive commit history, we ensure transparency, facilitate future debugging or enhancements, and most importantly, meet the "Exceeds expectations" criteria for **GitHub Utilization** (clear progression, problem-solving documentation) and contribute positively to the overall **Judge Impression** (demonstrates deep understanding, effort, and professionalism).
+
+## 7. Performance Videos
+
+Demonstration videos showcasing the vehicle's capabilities in action.
+
+-   **Free Round Qualification Run (Successful 3 Laps):** [![Watch on YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white)
+
+    -   Link:Will be uploaded soon In Sha Allah
+    -   Description: Shows the vehicle autonomously completing the required 3 laps in the Open Challenge configuration.
+
+-   **Obstacle Round Attempt (Traffic Signs & Parking Search):** [![Watch on YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white)](https://youtu.be/YYYYYYYYYYY)
+    -   Link:Will be uploaded soon In Sha Allah
+    -   Description: Demonstrates the vehicle's attempt at the Obstacle Challenge, including detecting traffic signs and searching for the parking lot (even if parking execution wasn't fully successful).
+
+## 8. Known Issues & Future Work
+
+This section outlines current limitations observed during development and testing, as well as potential areas for future improvement.
+
+-   **Known Issues:**
+    -   **Camera Latency:** Under certain lighting conditions or with high computational load on the Pi, a slight delay in camera processing was observed, which could affect high-speed maneuvering precision.
+    -   **Ultrasonic Sensor Noise:** Occasional erroneous readings from the ultrasonic sensors were noted, likely due to reflections or interference. Software filtering helped mitigate this but didn't eliminate it entirely.
+    -   **Serial Communication Robustness:** While generally reliable, occasional data corruption was observed during intense motor activity, suggesting potential for EMI or buffer overflow issues under stress. Implementing a more robust checksum protocol could improve resilience.
+-   **Future Work/Improvements:**
+    -   **Advanced Path Planning:** Implement more sophisticated path planning algorithms (e.g., A\*, potential fields) for dynamic obstacle avoidance and optimized lap times.
+    -   **Enhanced Parking Algorithm:** Develop a more robust and adaptive parallel parking sequence using refined sensor fusion (camera + IMU + US) for higher success rates.
+    -   **Modular Software Architecture:** Refactor the Pi code into more modular components (e.g., separate modules for vision, control, state machine) to improve maintainability and reusability.
+    -   **Power Optimization:** Investigate further power optimization techniques for both Pi and Nano to extend potential runtime, especially if battery life becomes a limiting factor in longer runs or development sessions.
