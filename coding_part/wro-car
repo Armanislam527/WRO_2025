@@ -1,0 +1,42 @@
+#!/sbin/openrc-run
+
+description="WRO 2025 Self-Driving Car Controller"
+command="/home/pi/pi_main.py"
+command_user="pi"
+command_group="pi"
+# Use the standard pidfile location/name pattern
+#pidfile="/run/${RC_SVCNAME}.pid"
+# Log files
+stdout_log="/home/pi/logs/${RC_SVCNAME}_stdout.log"
+stderr_log="/home/pi/logs/${RC_SVCNAME}_stderr.log"
+
+# Function to prepare paths before starting
+start_pre() {
+    # Create log directory with correct permissions
+    checkpath -d /home/pi/logs -m 0755 -o pi:pi
+    # Create/touch log files with correct permissions
+    checkpath -f "${stdout_log}" -m 0644 -o pi:pi
+    checkpath -f "${stderr_log}" -m 0644 -o pi:pi
+    # Ensure the script is executable
+    if [ ! -x "${command}" ]; then
+        chmod +x "${command}"
+    fi
+}
+
+# OpenRC's standard supervisor function handles backgrounding and logging
+# We tell it how to run the command.
+supervisor=supervise-daemon
+# Pass extra arguments to the supervisor
+supervise_daemon_args="--stdout \"${stdout_log}\" --stderr \"${stderr_log}\""
+
+# Define dependencies
+depend() {
+    # Start after essential filesystems are mounted
+    need localmount
+    # Start after network is *available* (doesn't wait for DHCP lease)
+    # If your script needs internet immediately, use `need net` instead,
+    # but be aware it might fail if DHCP fails.
+    #after net
+    # Start after SSH daemon for login access
+    #need net.sshd
+}

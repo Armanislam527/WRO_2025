@@ -9,7 +9,7 @@
 -   Habibul Bashar Labib
 -   Basim Al Zabir Shammo (Coach)
 
-**Repository Last Updated:** April 5, 2025
+**Repository Last Updated:** 30 August, 2025
 
 ## 1. Project Overview
 
@@ -117,12 +117,12 @@ _(Include a simplified block diagram here if possible, or describe connections b
 
 1.  **Clone this repository:**
     ```bash
-    git clone https://github.com/<your-username>/WRO_2025.git
+    git clone https://github.com/armanislam527/WRO_2025.git
     cd WRO_2025
     ```
 2.  **Flash Arduino Nano:**
     -   Open `nano_brain/nano_brain.ino` in the Arduino IDE.
-    -   Select the correct Board (e.g., Arduino Nano) and Port (e.g., `/dev/ttyUSB0`).
+    -   Select the correct Board (e.g., Arduino Nano(Old bootloader)) and Port (e.g., `/dev/ttyUSB0`).
     -   Upload the sketch to the Arduino Nano.
 3.  **Setup Raspberry Pi Software:**
     -   Transfer the contents of the `coding_part/` directory to your Raspberry Pi Zero 2W.
@@ -140,7 +140,7 @@ _(Include a simplified block diagram here if possible, or describe connections b
 4.  On the Pi, navigate to the directory containing the Pi code.
 5.  Run the Pi script (ensure serial port is correct):
     ```bash
-    python3 rpi.py # or pi_main.py
+    python3 pi_main.py
     ```
 6.  Press the designated start button on the Nano to initiate the run.
 
