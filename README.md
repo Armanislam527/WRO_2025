@@ -385,7 +385,9 @@ WRO_2025/<br>
 <br>│ ├── visual_diagram.jpg # (Optional) Another visual aid if needed.
 <br>│ └── power_source.csv # Details on power distribution (battery, regulators, connections).
 <br>├── Pictures/ # Images crucial for documentation and team identity.
-<br>│ ├── team_photo.jpg # Mandatory team photo as per WRO rules.
+
+<!-- <br>│ ├── team_photo.jpg # Mandatory team photo as per WRO rules. -->
+
 <br>│ ├── arman.jpeg # Individual team member photos.
 <br>│ ├── labib.jpg
 <br>│ ├── rohit.jpeg
