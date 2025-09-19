@@ -1,0 +1,53 @@
+Battery Pack (+) ---[Switch]---+---> To Buck Converter Input (+)
+                              |
+                              +---> To L298N VCC_MOT (+)
+
+Battery Pack (-) --------------+---> To Buck Converter Input (-)
+                              |
+                              +---> To L298N GND_MOT (-)
+                              |
+                              +---> Main GND Bus/Rail
+
+Buck Converter Output (+) ---> VCC_5V Bus/Rail
+Buck Converter Output (-) ---> Main GND Bus/Rail
+
+VCC_5V Bus/Rail --+--> Pi 5V Pins
+                  +--> Nano 5V Pin
+                  +--> MPU6050 VCC
+                  +--> Ultrasonic VCC (x4)
+                  +--> Servo VCC (Check current!)
+                  +--> Start Button Pull-Up (if external)
+                  +--> Capacitor (+) (x 3-4 near this point)
+
+Main GND Bus/Rail --+--> Pi GND Pins
+                    +--> Nano GND Pin
+                    +--> MPU6050 GND
+                    +--> Ultrasonic GND (x4)
+                    +--> Servo GND
+                    +--> Start Button (Other leg)
+                    +--> L298N GND
+                    +--> Capacitor (-) (x all 10)
+
+Nano Pin 2 <---[Push Button]---> GND (with internal pull-up)
+
+Nano Pins 0,1 <--> Pi GPIO 15,14 (UART - Check Logic Levels!)
+
+Nano A4, A5 ---> MPU6050 SDA, SCL (Add pull-ups if needed)
+
+Nano Pins 3,5,7,9 ---> Ultrasonic Trig 1,2,3,4
+Nano Pins 4,6,8,10 --> Ultrasonic Echo 1,2,3,4
+
+Nano Pin 11 ---> Servo Signal
+
+Nano Pins 12,13,A0 ---> L298N ENA, IN1, IN2
+
+L298N OUT1, OUT2 ---> Drive Motor Terminals
+
+VCC_MOT (+/-) Bus/Rail --+--> L298N VCC_MOT/GND_MOT
+                         +--> Capacitor (+/-) (x 2-3 near L298N)
+
+VCC_5V / GND near Nano --+--> Capacitor (+/-) (x 1-2 near Nano)
+
+VCC_5V / GND near Servo --+--> Capacitor (+/-) (x 1, if servo powered from VCC_5V)
+
+Pi CSI Port <--- Pi Camera Module

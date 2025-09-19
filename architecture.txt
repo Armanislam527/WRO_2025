@@ -1,0 +1,90 @@
+wro2025_nano_firmware/
+├── src/
+│   ├── main.ino                # Setup, loop, state machine
+│   ├── config.h                # Pin definitions, sensor addresses, motor parameters
+│   ├── sensors/                # Sensor reading functions
+│   │   ├── imu_handler.h       # MPU6050 setup, read, data processing (DMP or basic fusion)
+│   │   ├── imu_handler.cpp
+│   │   ├── us_sensor_array.h   # Array of ultrasonic sensors, read distances
+│   │   └── us_sensor_array.cpp
+│   ├── actuators/              # Motor/Servo control functions
+│   │   ├── motor_controller.h  # L298N control functions (set speed/direction)
+│   │   ├── motor_controller.cpp
+│   │   ├── servo_controller.h  # Steering servo control
+│   │   └── servo_controller.cpp
+│   ├── communication/          # Serial communication handler
+│   │   ├── serial_protocol.h   # Same packet definitions as Pi
+│   │   ├── serial_parser.h     # Parses incoming commands, builds outgoing data packets
+│   │   └── serial_parser.cpp
+│   ├── safety/                 # Fallback mechanisms
+│   │   ├── watchdog.h          # Timer, expects periodic "heartbeat" from Pi
+│   │   ├── watchdog.cpp
+│   │   ├── e_stop.h            # Handles emergency stop command
+│   │   └── e_stop.cpp
+│   └── utils/                  # Utility functions (e.g., CRC calculation)
+│       └── crc8.h
+└── platformio.ini              # PlatformIO project configuration (if used)
+
+
+and 
+
+wro2025_vehicle/
+├── src/
+│   ├── main.cpp                     # Entry point, initializes modules, main loop
+│   ├── config/                      # Configuration files or headers
+│   │   └── vehicle_config.h         # Physical dimensions, sensor pins, thresholds, etc.
+│   ├── communication/               # Handles serial communication with Nano
+│   │   ├── serial_protocol.h        # Defines packet structure, commands, IDs
+│   │   ├── serial_protocol.cpp
+│   │   ├── serial_handler.h         # Manages sending/receiving packets
+│   │   └── serial_handler.cpp
+│   ├── sensors/                     # Processes data received from Nano
+│   │   ├── sensor_data.h            # Structs for IMU, Ultrasonics data
+│   │   ├── sensor_fusion.h          # Combines sensor data (optional but useful)
+│   │   └── sensor_fusion.cpp
+│   ├── navigation/                  # Core logic modules
+│   │   ├── course_map.h             # Represents track state (walls, signs)
+│   │   ├── course_map.cpp
+│   │   ├── lap_counter.h            # Logic for counting laps based on position
+│   │   ├── lap_counter.cpp
+│   │   ├── sign_detector.h          # Interprets sign positions from camera/course_map
+│   │   └── sign_detector.cpp
+│   ├── control/                     # Decision-making logic
+│   │   ├── path_planner.h           # High-level path planning (where to go)
+│   │   ├── path_planner.cpp
+│   │   ├── trajectory_generator.h   # Calculates desired speed/steering (optional intermediate step)
+│   │   ├── trajectory_generator.cpp
+│   │   ├── parking_assistant.h      # Logic for finding parking spot and executing maneuver
+│   │   └── parking_assistant.cpp
+│   ├── actuators/                   # Sends commands based on decisions
+│   │   ├── vehicle_controller.h     # Translates high-level commands to motor/servo cmds
+│   │   └── vehicle_controller.cpp
+│   ├── vision/                      # Image processing modules
+│   │   ├── camera_interface.h       # Wrapper for camera capture (e.g., using libcamera or V4L2)
+│   │   ├── camera_interface.cpp
+│   │   ├── image_processor.h        # Core image processing logic
+│   │   ├── image_processor.cpp
+│   │   ├── roi_selector.h           # Defines and manages Region of Interest
+│   │   ├── roi_selector.cpp
+│   │   ├── color_detector.h         # Detects red/green signs within ROI
+│   │   ├── color_detector.cpp
+│   │   ├── edge_detector.h          # Detects track edges/lines within ROI
+│   │   ├── edge_detector.cpp
+│   │   ├── line_follower.h          # Logic based on edge detection (if used)
+│   │   └── line_follower.cpp
+│   └── utils/                       # Utility functions, math helpers, timers
+│       ├── timer.h
+│       ├── timer.cpp
+│       ├── math_utils.h
+│       └── logger.h                 # Simple logging for debugging
+├── include/                         # Public headers for libraries/modules (if needed)
+├── lib/                             # External libraries (e.g., OpenCV C++ headers/libs if not system-wide)
+├── build/                           # Build artifacts (created by CMake/make)
+├── CMakeLists.txt                   # Build configuration file (recommended for C++)
+├── docs/                            # Documentation files (for GitHub)
+│   └── README.md                    # Main documentation file (5000+ chars required)
+├── scripts/                         # Helper scripts (e.g., for camera setup, running the program)
+│   └── run_vehicle.sh
+├── videos/                          # Performance videos (for GitHub)
+├── photos/                          # Vehicle/team photos (for GitHub)
+└── LICENSE                          # License file (if applicable, good practice)

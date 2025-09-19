@@ -4,10 +4,10 @@
 
 **Team Members:**
 
--   **Arman** (Leader) - Lead Programmer, Chassis Designer [Arman](./Pictures/arman.jpeg)
--   **Sajid Hasan Rohit** -Member [Rohit](./Pictures/rohit.jpeg)
--   **Habibul Bashar Labib** - Member [Labib](./Pictures/labib.jpg)
--   **Basim Al Zabir Shammo** (Coach) - Guide and inspires the team to build the project [Shammo](./Pictures/shammo.jpg)
+-   **Arman** (Leader) - Lead Programmer, Chassis Designer [Arman](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/arman.jpeg)
+-   **Sajid Hasan Rohit** -Member [Rohit](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/rohit.jpeg)
+-   **Habibul Bashar Labib** - Member [Labib](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/labib.jpg)
+-   **Basim Al Zabir Shammo** (Coach) - Guide and inspires the team to build the project [Shammo](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/shammo.jpg)
 
 **Affiliation:** [Pabna University of Science and technology,Pabna,Bangladesh]
 
@@ -63,6 +63,11 @@ The vehicle's nervous system is a carefully orchestrated interplay of controller
     -   **Servo Motor (x1 - Front Steering):** Provides accurate angular control for steering, translating high-level directional commands into physical wheel movement.
 -   **Communication Backbone:** A **high-speed serial link (configured at 500,000 baud)** ensures low-latency, reliable data transfer between the Pi and Nano, facilitating real-time coordination.
 -   **Power Management:** A dedicated strategy involves a **lithium-ion battery pack**. Power is distributed via a **buck converter** to provide a stable 5V supply for the logic circuits (Nano, Pi, sensors) and direct, regulated power to the motor drivers for optimal performance.
+
+### 2.4. Vehicle view
+
+-   ## The vehicle view is below:
+    -**<br>Front View [Front Vied](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/front.jpeg)**<br> -**Left View [Left View](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/lef.jpeg)**<br> -**Right View [Right View](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/right.jpeg)**<br> -**Rear View [Rear View](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/rear_view.jpeg)**<br> -**Top View [Top View](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/up.jpeg)**<br> -**Bottom View [Bottom View](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/down.jpeg)**<br>
 
 ## 3. Software Architecture & Modules
 
@@ -262,7 +267,11 @@ Follow these steps to assemble the physical vehicle. Reference the 3D models in 
     -   **Start Button & Switch:**
         -   Wire the push button between the designated Nano input pin (e.g., A3) and GND. Use the internal pull-up resistor configured in the Nano code (`pinMode(START_BUTTON_PIN, INPUT_PULLUP);`) or add an external 10kΩ pull-up resistor between the pin and `+5V`.
         -   Wire the main power switch in series with the positive lead from the battery pack.
-4.  **Final Checks:**
+    -   **Pin Diagram:**
+        -   The pin diagram is below:
+        -   [Circuit](http://github.com/Armanislam527/WRO_2025/tree/main/Pictures/circuit_image.svg)
+
+-   4.  **Final Checks:**
     -   Visually inspect all connections for solder bridges, loose wires, or incorrect plugs.
     -   Ensure no components are shorted or obstructing moving parts.
     -   Verify the orientation of polarized components (diodes, electrolytic capacitors, motor connectors).
@@ -352,7 +361,7 @@ WRO_2025/<br>
 ├── LICENSE # Repository license (e.g., MIT, GPL)<br>
 ├── README.md # This comprehensive documentation file.<br>
 
-├── .gitignore # (Recommended) Specifies intentionally untracked files to ignore (e.g., \*.pyc, pycache/).<br>
+├── .gitignore # (Recommended) Specifies intentionally untracked files to ignore (e.g., \*\*<br>.pyc, pycache/).<br>
 
 ├── rulebook/ # Official WRO 2025 rule documents for reference.<br>
 │ ├── WRO-2025-Future-Engineers-Self-Driving-Cars-General-Rules.pdf<br>
@@ -475,7 +484,7 @@ This section outlines current limitations observed during development and testin
     -   **Ultrasonic Sensor Noise:** Occasional erroneous readings from the ultrasonic sensors were noted, likely due to reflections or interference. Software filtering helped mitigate this but didn't eliminate it entirely.
     -   **Serial Communication Robustness:** While generally reliable, occasional data corruption was observed during intense motor activity, suggesting potential for EMI or buffer overflow issues under stress. Implementing a more robust checksum protocol could improve resilience.
 -   **Future Work/Improvements:**
-    -   **Advanced Path Planning:** Implement more sophisticated path planning algorithms (e.g., A\*, potential fields) for dynamic obstacle avoidance and optimized lap times.
+    -   **Advanced Path Planning:** Implement more sophisticated path planning algorithms (e.g., A\*\*<br>, potential fields) for dynamic obstacle avoidance and optimized lap times.
     -   **Enhanced Parking Algorithm:** Develop a more robust and adaptive parallel parking sequence using refined sensor fusion (camera + IMU + US) for higher success rates.
     -   **Modular Software Architecture:** Refactor the Pi code into more modular components (e.g., separate modules for vision, control, state machine) to improve maintainability and reusability.
     -   **Power Optimization:** Investigate further power optimization techniques for both Pi and Nano to extend potential runtime, especially if battery life becomes a limiting factor in longer runs or development sessions.
