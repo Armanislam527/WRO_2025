@@ -53,7 +53,7 @@ private:
     // std::shared_ptr<SignDetector> signDetector; // Add when SignDetector is implemented
 
     // Internal state for decision making
-    MissionState::ChallengeType lastKnownChallenge;
+    ::ChallengeType lastKnownChallenge;
 
     // Helper functions for specific planning logic
     NavigationCommand planForOpenChallenge(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState);

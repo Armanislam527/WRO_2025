@@ -241,8 +241,8 @@ void VehicleController::sendServoCommand(float normalizedSteering)
     // Ensure angle is within 0-180
     if (servoAngle > 180)
         servoAngle = 180;
-    if (servoAngle < 0)
-        servoAngle = 0;
+    // if (servoAngle < 0)
+    //     servoAngle = 0;
 
     if (serialHandler)
     {

@@ -24,9 +24,7 @@
 #endif
 
 SerialHandler::SerialHandler()
-    : serialFd(-1), isOpen(false), stopReceiving(false),
-      rxBufferIndex(0), currentState(ParseState::IDLE),
-      sensorDataUpdated(false), startAckReceived(false)
+    : serialFd(-1), isOpen(false), stopReceiving(false), sensorDataUpdated(false), currentState(ParseState::IDLE), rxBufferIndex(0), startAckReceived(false)
 {
     resetParser();
     // Initialize latestSensorData to zero or default values if needed
@@ -274,6 +272,7 @@ void SerialHandler::processData(const uint8_t *buffer, size_t length)
             break;
 
         case ParseState::DATA_RECEIVED:
+        {
             // This byte is the checksum
             rxBuffer[rxBufferIndex + 2] = incomingByte; // Store checksum
             currentState = ParseState::CHECKSUM_RECEIVED;
@@ -310,9 +309,13 @@ void SerialHandler::processData(const uint8_t *buffer, size_t length)
             {
                 std::cerr << "Serial packet checksum error!" << std::endl;
             }
+        }
             resetParser();
             break;
-
+        case ParseState::CHECKSUM_RECEIVED:
+            // This state is handled and transitions in DATA_RECEIVED case.
+            // If we somehow land here, it's an unexpected state.
+            [[fallthrough]]; // C++17 attribute, or just let it fall through
         default:
             resetParser();
             break;
