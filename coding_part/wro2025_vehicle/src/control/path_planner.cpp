@@ -4,8 +4,8 @@
 #include "path_planner.h"
 #include <iostream>
 #include <algorithm> // For std::max, std::min
-
-PathPlanner::PathPlanner() : lastKnownChallenge(MissionState::ChallengeType::UNKNOWN)
+#include "../navigation/mission_state.h"
+PathPlanner::PathPlanner() : lastKnownChallenge(ChallengeType::UNKNOWN)
 {
     // Constructor
 }
@@ -31,7 +31,8 @@ NavigationCommand PathPlanner::plan(const SensorData &sensorData, const VisionSn
     {
         lastKnownChallenge = missionState.getChallengeType();
         std::cout << "PathPlanner: Challenge type changed to "
-                  << (lastKnownChallenge == MissionState::ChallengeType::OPEN_CHALLENGE ? "Open" : "Obstacle")
+                  // OLD: << (lastKnownChallenge == MissionState::ChallengeType::OPEN_CHALLENGE ? "Open" : "Obstacle")
+                  << (lastKnownChallenge == ChallengeType::OPEN_CHALLENGE ? "Open" : "Obstacle") // <-- NEW
                   << std::endl;
     }
 
@@ -81,6 +82,8 @@ NavigationCommand PathPlanner::plan(const SensorData &sensorData, const VisionSn
 
 NavigationCommand PathPlanner::planForOpenChallenge(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
 {
+    (void)visionData;
+    (void)missionState;
     // In Open Challenge, there are no signs. Strategy is usually wall following.
     // Common strategies: Left Wall Following, Right Wall Following.
     // For simplicity, let's assume a basic left wall following strategy.
@@ -110,8 +113,8 @@ NavigationCommand PathPlanner::planForOpenChallenge(const SensorData &sensorData
     // Default left wall following logic (simplified)
     // Aim to maintain a certain distance from the left wall
     int16_t leftDistance = sensorData.leftDistance;
-    int16_t frontDistance = sensorData.frontDistance;
-
+    int16_t frontDistanceVar = sensorData.frontDistance;
+    (void)frontDistanceVar;    // Unused for now
     float desiredSpeed = 0.6f; // Medium speed
     // Action is implicit in speed/steering calculation in this simplified view
     // A more complex planner might explicitly set FOLLOW_LEFT_LANE
@@ -119,7 +122,7 @@ NavigationCommand PathPlanner::planForOpenChallenge(const SensorData &sensorData
     // Simple proportional controller for steering based on left distance
     // Target distance from left wall (mm)
     const float TARGET_LEFT_DISTANCE = 200.0f;
-    const float MAX_STEERING_ADJUSTMENT = 20.0f; // Degrees
+    // const float MAX_STEERING_ADJUSTMENT = 20.0f; // Degrees
 
     float distanceError = static_cast<float>(leftDistance) - TARGET_LEFT_DISTANCE;
     // Clamp error to prevent overreaction
@@ -140,7 +143,9 @@ NavigationCommand PathPlanner::planForObstacleChallenge(const SensorData &sensor
     // In Obstacle Challenge, follow traffic signs.
     // Green sign means follow left lane.
     // Red sign means follow right lane.
-
+    (void)sensorData;
+    (void)visionData;
+    (void)missionState; // If not used yet
     // Basic obstacle avoidance check (takes precedence)
     float turnDirection = 0.0f;
     if (needsObstacleAvoidance(sensorData, turnDirection))
@@ -206,6 +211,9 @@ NavigationCommand PathPlanner::planForObstacleChallenge(const SensorData &sensor
 
 NavigationCommand PathPlanner::planForStopping(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
 {
+    (void)sensorData;
+    (void)visionData;
+    (void)missionState;
     // This phase is for stopping in the start section after 3 laps.
     // The main logic for *when* to stop should be in main.cpp using PositionalMemory.
     // The PathPlanner's role here might be to refine the approach or execute the final stop.
@@ -222,6 +230,9 @@ NavigationCommand PathPlanner::planForStopping(const SensorData &sensorData, con
 
 NavigationCommand PathPlanner::planForParking(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
 {
+    (void)sensorData;
+    (void)visionData;
+    (void)missionState;
     // Handle parking phases
     if (missionState.getPhase() == MissionPhase::FINDING_PARKING)
     {

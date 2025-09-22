@@ -24,7 +24,7 @@
 #endif
 
 SerialHandler::SerialHandler()
-    : serialFd(-1), isOpen(false), stopReceiving(false), sensorDataUpdated(false), currentState(ParseState::IDLE), rxBufferIndex(0), startAckReceived(false)
+    : serialFd(-1), isOpen(false), stopReceiving(false), sensorDataUpdated(false), rxBufferIndex(0), startAckReceived(false), currentState(ParseState::IDLE)
 {
     resetParser();
     // Initialize latestSensorData to zero or default values if needed

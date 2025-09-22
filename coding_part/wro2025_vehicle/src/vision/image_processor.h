@@ -8,11 +8,14 @@
 #include <memory>
 #include <atomic>
 #include <thread>
-// #include <mutex>
+#include <mutex>
 // #include "camera_interface.h"               // To get frames
 #include "frame_buffer.h"                    // Include the buffer header
 #include "../navigation/positional_memory.h" // For VisionSnapshot
-
+// --- ADD INCLUDES FOR NEW MODULES ---
+#include "color_detector.h"
+#include "edge_detector.h"
+// #include "roi_selector.h" // Future if needed
 class ImageProcessor
 {
 public:
@@ -43,12 +46,14 @@ private:
     std::atomic<bool> stopProcessingFlag;
 
     // Synchronization for the latest snapshot
-    // mutable std::mutex snapshotMutex;
+    mutable std::mutex snapshotMutex;
     VisionSnapshot latestSnapshot;
     std::atomic<bool> newSnapshotAvailable;
 
     // Processing parameters (could be moved to config)
     cv::Rect roi; // Region of Interest for sign detection
+    ColorDetector colorDetector_;
+    EdgeDetector edgeDetector_;
     // HSV ranges for Red and Green (from rules: RGB(238, 39, 55) and RGB(68, 214, 44))
     // These will need tuning
     cv::Scalar redLower1, redUpper1; // Red wraps around in HSV
@@ -60,8 +65,8 @@ private:
 
     // Core processing functions
     void processFrame(const cv::Mat &frame, VisionSnapshot &outputSnapshot);
-    void detectSigns(const cv::Mat &hsvFrame, bool &leftSign, bool &rightSign, cv::Point &leftCentroid, cv::Point &rightCentroid);
-    void detectEdges(const cv::Mat &frame, float &avgLeftEdgeX, float &avgRightEdgeX); // Simplified
+    // void detectSigns(const cv::Mat &hsvFrame, bool &leftSign, bool &rightSign, cv::Point &leftCentroid, cv::Point &rightCentroid);
+    // void detectEdges(const cv::Mat &frame, float &avgLeftEdgeX, float &avgRightEdgeX); // Simplified
 };
 
 #endif // IMAGE_PROCESSOR_H

@@ -1,26 +1,36 @@
-// vision/image_processor.cpp
-// Implementation of ImageProcessor
+// src/vision/image_processor.cpp
+// Implementation of ImageProcessor (Coordinator using modular detectors)
 
 #include "image_processor.h"
 #include <iostream>
-#include <cmath> // For round
+#include <cmath>     // For round, atan2, sqrt etc.
+#include <algorithm> // For std::max, std::min if needed
+// --- INCLUDES FOR NEW MODULES ---
+#include "color_detector.h"
+#include "edge_detector.h"
+#include "../utils/logger.h" // Include the logger
+// --- END OF INCLUDES ---
 
 ImageProcessor::ImageProcessor()
     : isInitialized(false), isProcessing(false), stopProcessingFlag(false), newSnapshotAvailable(false)
 {
     // Define initial ROI (e.g., top half of the image)
-    roi = cv::Rect(0, 0, 640, 240); // Will be adjusted based on actual frame size
+    // This will be adjusted based on the actual frame size in processFrame
+    roi = cv::Rect(0, 0, 640, 240);
 
-    // Define initial HSV ranges for Red and Green pillars
-    // These are starting points and WILL need adjustment based on actual lighting/ camera
-    // Red HSV (wraps around 0/180)
-    redLower1 = cv::Scalar(0, 100, 100);
-    redUpper1 = cv::Scalar(10, 255, 255);
-    redLower2 = cv::Scalar(170, 100, 100);
-    redUpper2 = cv::Scalar(180, 255, 255);
-    // Green HSV
-    greenLower = cv::Scalar(40, 50, 50);
-    greenUpper = cv::Scalar(80, 255, 255);
+    // --- INITIALIZE DETECTORS WITH DEFAULT PARAMETERS ---
+    // Parameters can be tuned here or via a configuration mechanism later
+    // ColorDetector uses defaults set in its constructor
+    // Example of setting custom HSV ranges if needed:
+    // colorDetector_.setRedHSVRange(cv::Scalar(0, 120, 120), cv::Scalar(5, 255, 255),
+    //                               cv::Scalar(175, 120, 120), cv::Scalar(180, 255, 255));
+    // colorDetector_.setGreenHSVRange(cv::Scalar(45, 60, 60), cv::Scalar(75, 255, 255));
+
+    // EdgeDetector uses defaults set in its constructor
+    // Example of setting custom Canny/Hough parameters if needed:
+    // edgeDetector_.setCannyThresholds(40, 120);
+    // edgeDetector_.setHoughParams(1.0, CV_PI / 180, 40, 25.0, 8.0);
+    // --- END OF INITIALIZATION ---
 }
 
 ImageProcessor::~ImageProcessor()
@@ -36,12 +46,11 @@ bool ImageProcessor::initialize(std::shared_ptr<FrameBuffer> frameBuf)
         return false;
     }
     if (!frameBuf)
-    { // Check for valid shared pointer
+    {
         std::cerr << "Invalid frame buffer provided." << std::endl;
         return false;
     }
 
-    // Store the shared pointer to the frame buffer
     frameBufferSource = frameBuf;
     isInitialized = true;
     std::cout << "ImageProcessor initialized with frame buffer." << std::endl;
@@ -109,16 +118,23 @@ void ImageProcessor::processingLoop()
 {
     cv::Mat frame;
     VisionSnapshot currentSnapshot;
+    int wait_counter = 0; // Counter for wait messages
 
     while (!stopProcessingFlag)
     {
-        // Get the latest frame from the camera
+        LOG_VERBOSE("ImageProcessor: processingLoop iteration started.");
+        // Get the latest frame from the frame buffer
+        // Check if a new frame is available first
         if (frameBufferSource && frameBufferSource->hasNewFrame())
         {
+            LOG_DEBUG("ImageProcessor: frameBufferSource->hasNewFrame() returned true.");
+            // Attempt to get the frame
             if (frameBufferSource->getFrame(frame))
             {
+                LOG_INFO("ImageProcessor: Successfully got a frame from FrameBuffer (size: " << frame.cols << "x" << frame.rows << ").");
                 // Process the frame
                 processFrame(frame, currentSnapshot);
+                LOG_INFO("ImageProcessor: Completed processFrame call.");
 
                 // Store the processed snapshot
                 {
@@ -126,19 +142,35 @@ void ImageProcessor::processingLoop()
                     latestSnapshot = currentSnapshot;
                     newSnapshotAvailable = true;
                 }
-                // std::cout << "Processed new frame snapshot." << std::endl; // Verbose
+                LOG_INFO("ImageProcessor: Updated latestSnapshot and signaled new data.");
+                // Reset wait counter as we processed a frame
+                wait_counter = 0;
+            }
+            else
+            {
+                LOG_WARN("ImageProcessor: hasNewFrame() was true, but getFrame() failed. Possible race condition or buffer issue.");
             }
         }
         else
         {
-            // No new frame, small sleep to prevent busy-waiting
+            // No new frame is available, handle waiting
+            // Small sleep to prevent busy-waiting
+            wait_counter++;
+            if (wait_counter % 500 == 0) // Log every 500 cycles (~1 second at 2ms sleep)
+            {
+                LOG_INFO("ImageProcessor: Waiting for new frame in processingLoop (cycle " << wait_counter << ").");
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
-    }
+        LOG_VERBOSE("ImageProcessor: processingLoop iteration ended.");
+    } // End while loop
+    LOG_INFO("ImageProcessor: processingLoop thread exiting.");
 }
-
 void ImageProcessor::processFrame(const cv::Mat &frame, VisionSnapshot &outputSnapshot)
 {
+    LOG_DEBUG("ImageProcessor::processFrame called.");
+    // std::cout << "ImageProcessor::processFrame called." << std::endl; // Verbose
+    // Use LOG_DEBUG if logger is active
     // Initialize output
     outputSnapshot.signLeftDetected = false;
     outputSnapshot.signRightDetected = false;
@@ -147,199 +179,76 @@ void ImageProcessor::processFrame(const cv::Mat &frame, VisionSnapshot &outputSn
 
     if (frame.empty())
     {
+        // std::cerr << "ImageProcessor::processFrame received an empty frame." << std::endl; // Verbose
+        // Use LOG_WARN if logger is active
+        LOG_WARN("ImageProcessor::processFrame received an empty frame.");
         return; // Nothing to process
     }
+    // std::cout << "ImageProcessor::processFrame processing frame of size " << frame.cols << "x" << frame.rows << std::endl; // Verbose
+    // Use LOG_DEBUG if logger is active
+    LOG_DEBUG("ImageProcessor::processFrame processing frame of size " << frame.cols << "x" << frame.rows);
 
     // Adjust ROI based on current frame size if needed
+    // Simple adjustment: top half. In a more complex scenario, this could be dynamic.
     if (roi.width != frame.cols || roi.height != frame.rows / 2)
     {
-        // Simple adjustment: top half
         roi = cv::Rect(0, 0, frame.cols, frame.rows / 2);
+        // std::cout << "ImageProcessor: ROI adjusted to " << roi.width << "x" << roi.height << std::endl; // Verbose
+        // Use LOG_DEBUG if logger is active
+        LOG_DEBUG("ImageProcessor: ROI adjusted to " << roi.width << "x" << roi.height);
     }
 
     // Extract ROI
     cv::Mat roiFrame = frame(roi);
 
-    // Convert to HSV for color detection
+    // --- 1. Detect Traffic Signs using ColorDetector ---
+    // Convert ROI to HSV for color detection
     cv::Mat hsvFrame;
     cv::cvtColor(roiFrame, hsvFrame, cv::COLOR_BGR2HSV);
 
-    // --- 1. Detect Traffic Signs ---
     cv::Point leftCentroid, rightCentroid;
-    detectSigns(hsvFrame, outputSnapshot.signLeftDetected, outputSnapshot.signRightDetected, leftCentroid, rightCentroid);
+    bool leftSignFound = colorDetector_.detectGreenSign(hsvFrame, leftCentroid);
+    bool rightSignFound = colorDetector_.detectRedSign(hsvFrame, rightCentroid);
 
-    // --- 2. Detect Track Edges (Simplified) ---
-    // A more robust method like Canny + HoughLinesP would be better
-    detectEdges(roiFrame, outputSnapshot.avgLeftEdgeX, outputSnapshot.avgRightEdgeX);
+    outputSnapshot.signLeftDetected = leftSignFound;
+    outputSnapshot.signRightDetected = rightSignFound;
+    // Note: Centroids are relative to the ROI. If full-frame coordinates are needed later,
+    // adjust them by adding roi.x, roi.y. For now, they are sufficient for relative positioning logic.
+
+    // --- Optional: Resolve conflicts if both detected ---
+    // E.g., if centroids are very close, or one is much larger, prioritize.
+    // Define a minimum expected distance between signs (adjust based on testing)
+    const double minExpectedSignDistance = 50.0; // Example value in pixels
+
+    if (leftSignFound && rightSignFound)
+    {
+        double distance = cv::norm(leftCentroid - rightCentroid);
+        if (distance < minExpectedSignDistance)
+        {
+            // std::cerr << "ImageProcessor: Sign conflict detected (distance: " << distance << "). Resolving..." << std::endl; // Verbose
+            // Likely a false positive, choose the one with larger area or better solidity
+            // A more sophisticated method could be in ColorDetector itself.
+            // Simple heuristic: Prefer left sign (arbitrary, or based on last known state)
+            // For now, let's disable the right sign.
+            outputSnapshot.signRightDetected = false;
+            rightCentroid = cv::Point(-1, -1); // Invalidate centroid
+            // std::cerr << "ImageProcessor: Conflict resolved. Disabled right sign." << std::endl; // Verbose
+            // Use LOG_WARN/INFO if logger is active
+            LOG_WARN("ImageProcessor: Conflict resolved. Disabled right sign.");
+        }
+    }
+    // --- End of Sign Detection ---
+
+    // --- 2. Detect Track Edges using EdgeDetector ---
+    std::vector<cv::Vec4i> detectedLines;
+    edgeDetector_.detectEdgesAndLines(roiFrame, detectedLines);
+    edgeDetector_.findAverageEdgePositions(detectedLines, roiFrame.cols, outputSnapshot.avgLeftEdgeX, outputSnapshot.avgRightEdgeX);
+    // --- End of Edge Detection ---
+
+    // std::cout << "ImageProcessor::processFrame completed." << std::endl; // Verbose
+    // Use LOG_DEBUG if logger is active
+    LOG_DEBUG("ImageProcessor::processFrame completed.");
 }
-
-void ImageProcessor::detectSigns(const cv::Mat &hsvFrame, bool &leftSign, bool &rightSign, cv::Point &leftCentroid, cv::Point &rightCentroid)
-{
-    leftSign = false;
-    rightSign = false;
-    leftCentroid = cv::Point(-1, -1);
-    rightCentroid = cv::Point(-1, -1);
-
-    // --- Detect Red (Right Lane Sign) ---
-    cv::Mat redMask1, redMask2, redMask;
-    cv::inRange(hsvFrame, redLower1, redUpper1, redMask1);
-    cv::inRange(hsvFrame, redLower2, redUpper2, redMask2);
-    cv::bitwise_or(redMask1, redMask2, redMask);
-
-    // Noise reduction
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
-    cv::morphologyEx(redMask, redMask, cv::MORPH_OPEN, kernel);
-    cv::morphologyEx(redMask, redMask, cv::MORPH_CLOSE, kernel);
-
-    // Find contours
-    std::vector<std::vector<cv::Point>> redContours;
-    cv::findContours(redMask, redContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-    // Find the largest red contour (assuming it's the sign)
-    double largestRedArea = 0;
-    int largestRedIndex = -1;
-    for (size_t i = 0; i < redContours.size(); i++)
-    {
-        double area = cv::contourArea(redContours[i]);
-        if (area > largestRedArea && area > 100)
-        { // Minimum area threshold
-            largestRedArea = area;
-            largestRedIndex = i;
-        }
-    }
-
-    if (largestRedIndex != -1)
-    {
-        rightSign = true;
-        // Calculate centroid
-        cv::Moments m = cv::moments(redContours[largestRedIndex]);
-        if (m.m00 != 0)
-        {
-            rightCentroid.x = static_cast<int>(m.m10 / m.m00);
-            rightCentroid.y = static_cast<int>(m.m01 / m.m00);
-            // Adjust centroid to full frame coordinates if needed
-            // rightCentroid.y += roi.y; // If ROI is not the full frame top part
-        }
-    }
-
-    // --- Detect Green (Left Lane Sign) ---
-    cv::Mat greenMask;
-    cv::inRange(hsvFrame, greenLower, greenUpper, greenMask);
-
-    // Noise reduction
-    cv::morphologyEx(greenMask, greenMask, cv::MORPH_OPEN, kernel);
-    cv::morphologyEx(greenMask, greenMask, cv::MORPH_CLOSE, kernel);
-
-    // Find contours
-    std::vector<std::vector<cv::Point>> greenContours;
-    cv::findContours(greenMask, greenContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-    // Find the largest green contour
-    double largestGreenArea = 0;
-    int largestGreenIndex = -1;
-    for (size_t i = 0; i < greenContours.size(); i++)
-    {
-        double area = cv::contourArea(greenContours[i]);
-        if (area > largestGreenArea && area > 100)
-        { // Minimum area threshold
-            largestGreenArea = area;
-            largestGreenIndex = i;
-        }
-    }
-
-    if (largestGreenIndex != -1)
-    {
-        leftSign = true;
-        // Calculate centroid
-        cv::Moments m = cv::moments(greenContours[largestGreenIndex]);
-        if (m.m00 != 0)
-        {
-            leftCentroid.x = static_cast<int>(m.m10 / m.m00);
-            leftCentroid.y = static_cast<int>(m.m01 / m.m00);
-            // Adjust centroid to full frame coordinates if needed
-            // leftCentroid.y += roi.y;
-        }
-    }
-
-    // Optional: Determine sign position relative to image center
-    // int imageCenterX = hsvFrame.cols / 2;
-    // if (leftSign && leftCentroid.x > imageCenterX) {
-    //     // Green sign is on the right half, might be a false positive or mis-identified
-    //     // Could add logic to handle this
-    // }
-    // if (rightSign && rightCentroid.x < imageCenterX) {
-    //     // Red sign is on the left half, might be a false positive or mis-identified
-    // }
-}
-
-void ImageProcessor::detectEdges(const cv::Mat &frame, float &avgLeftEdgeX, float &avgRightEdgeX)
-{
-    avgLeftEdgeX = -1.0f;
-    avgRightEdgeX = -1.0f;
-
-    // Simplified edge detection using color thresholding on grayscale
-    // Assumes white track lines on dark background or distinct edge colors
-    // A more robust approach would use Canny edge detection and HoughLinesP
-
-    cv::Mat grayFrame;
-    cv::cvtColor(frame, grayFrame, cv::COLOR_BGR2GRAY);
-
-    // Apply Gaussian blur to reduce noise
-    cv::GaussianBlur(grayFrame, grayFrame, cv::Size(5, 5), 0);
-
-    // Threshold to get binary image (white lines on black)
-    // This threshold is critical and environment-dependent
-    cv::Mat binaryFrame;
-    cv::threshold(grayFrame, binaryFrame, 180, 255, cv::THRESH_BINARY); // Adjust 180
-
-    // Morphological operations to clean up the image
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-    cv::morphologyEx(binaryFrame, binaryFrame, cv::MORPH_CLOSE, kernel);
-
-    // Analyze columns to find edges
-    // Sum pixel values in each column
-    cv::Mat colSums;
-    cv::reduce(binaryFrame, colSums, 0, cv::REDUCE_SUM, CV_32F); // Sum along rows (result is 1xN)
-
-    // Find potential left and right edges
-    // A simple approach: find the first and last column with significant sum
-    float threshold = binaryFrame.rows * 255 * 0.3f; // 30% of max possible sum for a column
-    int leftEdgeX = -1;
-    int rightEdgeX = -1;
-
-    // Scan from left for left edge
-    for (int i = 0; i < colSums.cols; ++i)
-    {
-        if (colSums.at<float>(0, i) > threshold)
-        {
-            leftEdgeX = i;
-            break;
-        }
-    }
-
-    // Scan from right for right edge
-    for (int i = colSums.cols - 1; i >= 0; --i)
-    {
-        if (colSums.at<float>(0, i) > threshold)
-        {
-            rightEdgeX = i;
-            break;
-        }
-    }
-
-    // Assign results
-    if (leftEdgeX != -1)
-    {
-        avgLeftEdgeX = static_cast<float>(leftEdgeX);
-    }
-    if (rightEdgeX != -1)
-    {
-        avgRightEdgeX = static_cast<float>(rightEdgeX);
-    }
-
-    // Note: This is a very basic edge detection.
-    // For better results, consider:
-    // 1. Canny edge detection: cv::Canny(grayFrame, edges, lowThresh, highThresh);
-    // 2. Hough Line Transform: cv::HoughLinesP(edges, lines, ...);
-    // 3. Fitting lines to the detected edges.
-}
+// --- REMOVED OLD MONOLITHIC detectSigns AND detectEdges FUNCTIONS ---
+// Their logic has been moved to ColorDetector and EdgeDetector respectively.
+// --- END OF REMOVAL ---

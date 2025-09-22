@@ -1,5 +1,6 @@
-// main.cpp (Updated/Refined parts)
-// ... (existing includes) ...
+// main.cpp
+// Entry point for the WRO 2025 Pi-side application
+
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -13,7 +14,7 @@
 #include "sensors/sensor_data.h"
 #include "vision/camera_interface.h"
 #include "vision/image_processor.h"
-#include "navigation/mission_state.h"
+#include "navigation/mission_state.h" // Include for MissionPhase enum
 #include "navigation/positional_memory.h"
 #include "navigation/lap_counter.h"
 #include "control/path_planner.h"
@@ -47,6 +48,8 @@ std::shared_ptr<PositionalMemory> g_positionalMemory;
 
 int main(int argc, char *argv[])
 {
+    (void)argc; // Explicitly mark as unused
+    (void)argv;
     std::cout << "WRO 2025 Future Engineers - Raspberry Pi Controller" << std::endl;
     std::cout << "Initializing system..." << std::endl;
 
@@ -151,7 +154,7 @@ bool initializeModules()
             }
             else
             {
-                std::cout << "ImageProcessor initialized and processing." << std::endl;
+                std::cout << "ImageProcessor initialized and processing..." << std::endl;
             }
         }
     }
@@ -197,19 +200,15 @@ void runMainLoop()
 {
     // This is the central orchestrator of the vehicle's actions.
 
-    // 1. Get latest sensor data from Nano
-    SensorData latestSensorData;
-    bool newSensorData = g_serialHandler->getLatestSensorData(latestSensorData);
-
-    // 2. Get latest vision snapshot from ImageProcessor
-    VisionSnapshot latestVisionData;
-    bool newVisionData = g_imageProcessor->getLatestSnapshot(latestVisionData);
-
     // 3. Update Mission State based on serial events (like START_ACK)
+    // MOVED: Declaration and retrieval of sensor/vision data to specific handler functions.
+
     if (g_serialHandler->hasStartAck())
     {
+        // --- FIX: Use MissionPhase::PRE_START ---
         if (g_missionState->getPhase() == MissionPhase::PRE_START)
         {
+            // --- FIX: Use MissionPhase::WAITING_FOR_GO ---
             g_missionState->setPhase(MissionPhase::WAITING_FOR_GO);
             std::cout << "[MainLoop] Nano button press acknowledged. Waiting for GO command." << std::endl;
             g_serialHandler->acknowledgeStartAck();
@@ -219,6 +218,7 @@ void runMainLoop()
     // 4. Execute logic based on the current mission phase
     switch (g_missionState->getPhase())
     {
+    // --- FIX: Use MissionPhase:: for all cases ---
     case MissionPhase::PRE_START:
         handlePreStart();
         break;
@@ -226,14 +226,14 @@ void runMainLoop()
         handleWaitingForGo();
         break;
     case MissionPhase::DRIVING_LAPS:
-        handleDriving();
+        handleDriving(); // Data retrieval happens inside handleDriving
         break;
     case MissionPhase::STOPPING_AT_START:
-        handleStoppingAtStart(); // This will use PositionalMemory
+        handleStoppingAtStart(); // Data retrieval happens inside handleStoppingAtStart
         break;
     case MissionPhase::FINDING_PARKING:
     case MissionPhase::PARKING:
-        handleParking(); // This will use VehicleController's parking logic
+        handleParking(); // Data retrieval happens inside handleParking
         break;
     case MissionPhase::COMPLETED:
         handleCompleted();
@@ -278,6 +278,7 @@ void handleWaitingForGo()
 
     // Assume Open Challenge initially, or determine based on config/file
     g_missionState->setChallengeType(ChallengeType::OPEN_CHALLENGE);
+    // --- FIX: Use MissionPhase::DRIVING_LAPS ---
     g_missionState->setPhase(MissionPhase::DRIVING_LAPS);
     g_missionState->setCurrentLap(0);
 
@@ -289,29 +290,29 @@ void handleDriving()
 {
     static bool initialDataStored = false;
 
-    // Get latest data (assumed to be retrieved in runMainLoop scope for efficiency)
-    // SensorData latestSensorData, VisionSnapshot latestVisionData are available
+    // --- MOVE THE DECLARATIONS AND RETRIEVAL HERE ---
+    // 1. Get latest sensor data from Nano
+    SensorData latestSensorData;
+    bool newSensorData = g_serialHandler->getLatestSensorData(latestSensorData);
 
+    // 2. Get latest vision snapshot from ImageProcessor
+    VisionSnapshot latestVisionData;
+    bool newVisionData = g_imageProcessor->getLatestSnapshot(latestVisionData);
+
+    // --- USE THE VARIABLES HERE ---
     if (newSensorData && newVisionData)
     {
         // --- 1. Update Lap Counter ---
         g_lapCounter->update(latestSensorData, latestVisionData);
 
-        // --- 2. Determine if in Start Section (using LapCounter logic or PositionalMemory) ---
-        // For now, rely on LapCounter's internal logic or a simple check
-        // A more robust approach would be:
-        // bool isInStart = g_positionalMemory->isLikelyAtInitialPosition(latestSensorData, latestVisionData, 0.8f);
-        // g_lapCounter->setInStartSection(isInStart);
-        // g_missionState->setInStartSection(isInStart);
-
-        // Simpler check for now:
+        // --- 2. Determine if in Start Section ---
         g_missionState->setInStartSection(g_lapCounter->isInStartSection());
 
         // --- 3. Store Initial Position (Once, after stable start) ---
         if (!initialDataStored && g_missionState->getCurrentLap() >= 0)
-        { // Or wait a few loops
+        {
             g_positionalMemory->storeInitialPosition(latestSensorData, latestVisionData);
-            g_positionalMemory->storePreStopPosition(latestSensorData, latestVisionData); // Initial guess
+            g_positionalMemory->storePreStopPosition(latestSensorData, latestVisionData);
             initialDataStored = true;
             std::cout << "[Driving] Initial positional data stored." << std::endl;
         }
@@ -319,20 +320,21 @@ void handleDriving()
         // --- 4. Check for Lap Completion and Transition ---
         if (g_lapCounter->isLapCompleted())
         {
-            int lapJustCompleted = g_lapCounter->getCurrentLap(); // Gets the lap number that was just finished
+            int lapJustCompleted = g_lapCounter->getCurrentLap();
             std::cout << "[Driving] Lap " << lapJustCompleted << " completed." << std::endl;
-            g_lapCounter->acknowledgeLapCompletion(); // Reset the flag
+            g_lapCounter->acknowledgeLapCompletion();
 
             if (lapJustCompleted >= 3)
             {
-                // All 3 laps done. Transition based on challenge type.
                 if (g_missionState->isOpenChallenge())
                 {
+                    // --- FIX: Use MissionPhase::STOPPING_AT_START ---
                     g_missionState->setPhase(MissionPhase::STOPPING_AT_START);
                     std::cout << "[Driving] All laps completed (Open). Transitioning to STOPPING_AT_START." << std::endl;
                 }
                 else if (g_missionState->isObstacleChallenge())
                 {
+                    // --- FIX: Use MissionPhase::FINDING_PARKING ---
                     g_missionState->setPhase(MissionPhase::FINDING_PARKING);
                     std::cout << "[Driving] All laps completed (Obstacle). Transitioning to FINDING_PARKING." << std::endl;
                 }
@@ -343,6 +345,7 @@ void handleDriving()
         NavigationCommand navCommand = g_pathPlanner->plan(latestSensorData, latestVisionData, *g_missionState);
         g_vehicleController->executeCommand(navCommand);
     }
+    // --- END OF SCOPE FOR VARIABLES ---
 }
 
 void handleStoppingAtStart()
@@ -353,10 +356,18 @@ void handleStoppingAtStart()
     static bool stopCommandSent = false;
     static bool finalStopConfirmed = false;
 
+    // --- MOVE THE DECLARATIONS AND RETRIEVAL HERE ---
+    // Get latest data
+    SensorData latestSensorData;
+    bool newSensorData = g_serialHandler->getLatestSensorData(latestSensorData);
+
+    VisionSnapshot latestVisionData;
+    bool newVisionData = g_imageProcessor->getLatestSnapshot(latestVisionData);
+
+    // --- USE THE VARIABLES HERE ---
     if (newSensorData && newVisionData)
     {
         // --- 1. Check if we are back at the initial position ---
-        // Use a high threshold for the final stop to be quite sure.
         bool isAtInitial = g_positionalMemory->isLikelyAtPreStopPosition(latestSensorData, latestVisionData, 0.92f);
 
         if (!stopCommandSent)
@@ -372,12 +383,12 @@ void handleStoppingAtStart()
         if (isAtInitial && !finalStopConfirmed)
         {
             std::cout << "[StoppingAtStart] Confidently at start position. Finalizing stop." << std::endl;
-            // Send another stop command to ensure it's solid, or rely on VehicleController state
             NavigationCommand finalStopCmd(NavigationCommand::Action::STOP_IN_START, 0.0f);
             g_vehicleController->executeCommand(finalStopCmd);
             finalStopConfirmed = true;
             // Small delay to ensure vehicle comes to a complete halt before declaring completion
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            // --- FIX: Use MissionPhase::COMPLETED ---
             g_missionState->setPhase(MissionPhase::COMPLETED);
             std::cout << "[StoppingAtStart] Vehicle stopped in start section. Mission COMPLETED." << std::endl;
         }
@@ -389,51 +400,45 @@ void handleStoppingAtStart()
             // std::cout << "[StoppingAtStart] Not yet at start position, waiting for confirmation." << std::endl;
         }
     }
+    // --- END OF SCOPE FOR VARIABLES ---
 }
 
 void handleParking()
 {
     // In Obstacle Challenge, after 3 laps, find and execute parking.
-    // The VehicleController handles the complex parking sequence.
-    // This handler mainly triggers the start and monitors completion.
 
     static bool parkingInitiated = false;
 
+    // --- MOVE THE DECLARATIONS AND RETRIEVAL HERE ---
+    // Get latest data
+    SensorData latestSensorData;
+    bool newSensorData = g_serialHandler->getLatestSensorData(latestSensorData);
+
+    VisionSnapshot latestVisionData;
+    bool newVisionData = g_imageProcessor->getLatestSnapshot(latestVisionData);
+
+    // --- USE THE VARIABLES HERE ---
     if (newSensorData && newVisionData)
     {
+        // --- FIX: Use MissionPhase::FINDING_PARKING ---
         if (!parkingInitiated && g_missionState->getPhase() == MissionPhase::FINDING_PARKING)
         {
-            // --- 1. Logic to find parking lot entrance ---
-            // This could involve checking sensor data for a large gap on the outer wall.
-            // For simplicity, we'll assume the PathPlanner's EXECUTE_PARKING command
-            // signals readiness, or we could trigger it after a certain condition.
-
-            // Let's trigger parking when we are in the start section (where parking lot is)
-            // and have completed 3 laps.
             if (g_missionState->isInStartSection())
             {
                 std::cout << "[Parking] In start section after 3 laps. Initiating parking sequence." << std::endl;
                 NavigationCommand parkCmd(NavigationCommand::Action::EXECUTE_PARKING, 0.0f);
-                g_vehicleController->executeCommand(parkCmd); // This starts the internal parking sequence
+                g_vehicleController->executeCommand(parkCmd);
                 parkingInitiated = true;
-                // Transition state
+                // --- FIX: Use MissionPhase::PARKING ---
                 g_missionState->setPhase(MissionPhase::PARKING);
             }
-            // Else, PathPlanner in DRIVING_LAPS phase should guide vehicle towards start section
-            // where the parking lot is located.
         }
 
         // --- 2. Monitor parking progress ---
-        // The VehicleController's internal state machine handles this.
-        // We can check if it's done.
         if (parkingInitiated && !g_vehicleController->isManeuverActive())
         {
-            // Parking sequence (successful or failed) has finished.
-            // A more robust system would check the final state (PARKING_COMPLETE/FAILED)
-            // inside VehicleController. For now, we assume success if it finishes.
             std::cout << "[Parking] Parking sequence finished." << std::endl;
-            // After parking, the final goal is to stop (which parking should do)
-            // and declare mission complete.
+            // --- FIX: Use MissionPhase::COMPLETED ---
             g_missionState->setPhase(MissionPhase::COMPLETED);
             std::cout << "[Parking] Vehicle parked. Mission COMPLETED." << std::endl;
         }
@@ -441,15 +446,10 @@ void handleParking()
         // --- 3. While finding parking or parking is active, let PathPlanner guide ---
         if (!parkingInitiated || g_vehicleController->isManeuverActive())
         {
-            // If not yet initiated or parking is in progress (but not fully handed over),
-            // PathPlanner can still provide guidance (e.g., navigate to start section)
+            // --- FIX: Use MissionPhase::FINDING_PARKING ---
             if (g_missionState->getPhase() == MissionPhase::FINDING_PARKING)
             {
                 NavigationCommand navCommand = g_pathPlanner->plan(latestSensorData, latestVisionData, *g_missionState);
-                // Be careful not to override the parking command once sent.
-                // VehicleController should ignore new commands during parking.
-                // For simplicity here, we assume parking command is sent once and takes over.
-                // A better approach might be a flag or specific check in VehicleController.
                 if (!g_vehicleController->isManeuverActive())
                 {
                     g_vehicleController->executeCommand(navCommand);
@@ -457,6 +457,7 @@ void handleParking()
             }
         }
     }
+    // --- END OF SCOPE FOR VARIABLES ---
 }
 
 void handleCompleted()

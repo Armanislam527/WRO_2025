@@ -11,7 +11,8 @@ namespace config
     const uint32_t DEFAULT_NANO_BAUD_RATE = 115200;
 
     // --- Camera ---
-    const std::string DEFAULT_CAMERA_DEVICE = "/dev/video0";
+    // const std::string DEFAULT_CAMERA_DEVICE = "/dev/video0";
+    const std::string DEFAULT_CAMERA_DEVICE = ""; // Let rpicam-vid find it, or use "/base/soc/i2c0mux/i2c@1/ov5647@36"
     const int DEFAULT_CAMERA_WIDTH = 640;
     const int DEFAULT_CAMERA_HEIGHT = 480;
     const int DEFAULT_CAMERA_FPS = 20; // Adjust based on processing capability

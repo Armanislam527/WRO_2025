@@ -1,24 +1,27 @@
-// vision/camera_interface.h
-// Interface for camera capture
-
+// src/vision/camera_interface.h
 #ifndef CAMERA_INTERFACE_H
 #define CAMERA_INTERFACE_H
 
-#include <opencv2/opencv.hpp> // We'll assume OpenCV for now
+#include <opencv2/opencv.hpp>
 #include <string>
 #include <memory>
 #include <atomic>
 #include <thread>
-#include "frame_buffer.h"
+// #include <opencv2/videoio.hpp> // Remove or comment out, no longer using cv::VideoCapture
+#include <cstdio>         // For FILE*, popen, pclose
+#include <memory>         // For std::unique_ptr
+#include "frame_buffer.h" // Include the buffer header
+
 class CameraInterface
 {
 public:
     CameraInterface();
-    ~CameraInterface();
+    ~CameraInterface(); // Important for cleanup
 
     // Initialize the camera with specified parameters
-    bool initialize(const std::string &device = "/dev/video0",
-                    int width = 640, int height = 480, int fps = 30);
+    // Note: Some parameters like FPS might be set via rpicam-vid arguments
+    bool initialize(const std::string &device = "/base/soc/i2c0mux/i2c@1/ov5647@36", // Use libcamera ID if known, or let rpicam-vid find it
+                    int width = 640, int height = 480, int fps = 20);
 
     // Start capturing frames in a background thread
     bool startCapture();
@@ -26,32 +29,29 @@ public:
     // Stop capturing frames
     void stopCapture();
 
-    // Retrieve the latest captured frame
-    // Returns true if a new frame was available and copied
-    bool getLatestFrame(cv::Mat &frame);
-
     // Check if the camera is initialized and capturing
     bool isRunning() const;
+
+    // Get the shared frame buffer
     std::shared_ptr<FrameBuffer> getFrameBuffer() const { return frameBuffer; }
 
 private:
-    std::string devicePath;
+    std::string devicePath; // Might be used for rpicam-vid arguments or logging
     int frameWidth;
     int frameHeight;
     int targetFPS;
 
-    cv::VideoCapture capture; // OpenCV VideoCapture object
+    // --- CHANGED: Use FILE* for subprocess ---
+    FILE *cameraProcess;       // Handle for the rpicam-vid process
+    std::string cameraCommand; // The command used to start rpicam-vid
 
     std::atomic<bool> isInitialized;
     std::atomic<bool> isCapturing;
     std::thread captureThread;
     std::atomic<bool> stopCaptureFlag;
 
-    // Synchronization for the latest frame
-    mutable std::mutex frameMutex;
-    // cv::Mat latestFrame;
-    // std::atomic<bool> newFrameAvailable;
     std::shared_ptr<FrameBuffer> frameBuffer;
+
     // Function run by the capture thread
     void captureLoop();
 };

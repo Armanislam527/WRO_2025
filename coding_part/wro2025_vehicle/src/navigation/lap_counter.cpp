@@ -82,6 +82,7 @@ void LapCounter::setInStartSection(bool inStart)
 // - Integrate with a CourseMap to know expected section boundaries
 void LapCounter::checkForSectionTransition(const SensorData &sensorData, const VisionSnapshot &visionData)
 {
+    (void)visionData;
     // This is a very simplified example logic.
     // It assumes that passing a certain distance or a significant change in US readings
     // indicates entering a new section. This is highly dependent on track layout and vehicle speed.
@@ -89,6 +90,7 @@ void LapCounter::checkForSectionTransition(const SensorData &sensorData, const V
     // Example: Increment section counter if we've traveled a certain estimated distance
     // This is not robust and needs refinement.
     static float estimatedDistance = 0.0f;
+    (void)estimatedDistance;               // Placeholder to avoid unused variable warning
     static SensorData lastSensorData = {}; // Initialize with default values
     static bool firstUpdate = true;
 

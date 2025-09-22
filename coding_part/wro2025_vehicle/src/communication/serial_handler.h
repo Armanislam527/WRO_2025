@@ -58,12 +58,12 @@ private:
     SensorData latestSensorData;
     std::atomic<bool> sensorDataUpdated;
 
+    size_t rxBufferIndex;
     std::atomic<bool> startAckReceived;
 
     // Buffer for incoming raw bytes
     static const size_t RX_BUFFER_SIZE = 256;
     uint8_t rxBuffer[RX_BUFFER_SIZE];
-    size_t rxBufferIndex;
 
     // Packet parsing state
     enum class ParseState
