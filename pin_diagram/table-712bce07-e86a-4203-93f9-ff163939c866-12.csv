@@ -1,0 +1,5 @@
+﻿Sensor Name,VCC Pin,Trig Pin,Echo Pin,GND Pin
+Front,5V (Nano),D3 (Nano Pin 5),D4 (Nano Pin 6),GND (Nano)
+Right,5V (Nano),D5 (Nano Pin 11),D6 (Nano Pin 12),GND (Nano)
+Back,5V (Nano),D7 (Nano Pin 13),D8 (Nano Pin 14),GND (Nano)
+Left,5V (Nano),D9 (Nano Pin 15),D10 (Nano Pin 16),GND (Nano)

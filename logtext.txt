@@ -1,516 +1,2503 @@
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/WRO2025_Nano$ tree
+.
+├── config.h
+├── e_stop.cpp
+├── e_stop.h
+├── imu_handler.cpp
+├── imu_handler.h
+├── motor_controller.cpp
+├── motor_controller.h
+├── serial_parser.cpp
+├── serial_parser.h
+├── serial_protocol.cpp
+├── serial_protocol.h
+├── servo_controller.cpp
+├── servo_controller.h
+├── us_sensor_array.cpp
+├── us_sensor_array.h
+├── watchdog.cpp
+├── watchdog.h
+└── WRO2025_Nano.ino
 
-pi@pi:~/wro2025_vehicle/build $ make
-[  4%] Building CXX object CMakeFiles/WRO2025_Vehicle_Controller.dir/src/control/path_planner.cpp.o
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp: In constructor 'PathPlanner::PathPlanner()':
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp:8:63: error: 'MissionState::ChallengeType' has not been declared
-    8 | thPlanner::PathPlanner() : lastKnownChallenge(MissionState::ChallengeType::UNKNOWN)
-      |                                                             ^~~~~~~~~~~~~
+1 directory, 18 files
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/WRO2025_Nano$ cat *.*
+// config.h
+// Pin definitions and vehicle configuration constants
 
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp: In member function 'NavigationCommand PathPlanner::plan(const SensorData&, const VisionSnapshot&, const MissionState&)':
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp:34:59: error: 'MissionState::ChallengeType' has not been declared
-   34 |                   << (lastKnownChallenge == MissionState::ChallengeType::OPEN_CHALLENGE ? "Open" : "Obstacle")
-      |                                                           ^~~~~~~~~~~~~
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp: In member function 'NavigationCommand PathPlanner::planForOpenChallenge(const SensorData&, const VisionSnapshot&, const MissionState&)':
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp:124:17: warning: unused variable 'MAX_STEERING_ADJUSTMENT' [-Wunused-variable]
-  124 |     const float MAX_STEERING_ADJUSTMENT = 20.0f; // Degrees
-      |                 ^~~~~~~~~~~~~~~~~~~~~~~
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp: In member function 'NavigationCommand PathPlanner::planForObstacleChallenge(const SensorData&, const VisionSnapshot&, const MissionState&)':
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp:140:141: warning: unused parameter 'missionState' [-Wunused-parameter]
-  140 | Data, const VisionSnapshot &visionData, const MissionState &missionState)
-      |                                         ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~
+#ifndef CONFIG_H
+#define CONFIG_H
 
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp: In member function 'NavigationCommand PathPlanner::planForStopping(const SensorData&, const VisionSnapshot&, const MissionState&)':
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp:209:66: warning: unused parameter 'sensorData' [-Wunused-parameter]
-  209 | ationCommand PathPlanner::planForStopping(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
-      |                                           ~~~~~~~~~~~~~~~~~~^~~~~~~~~~
+// -----------------------------
+// Pin Definitions
+// -----------------------------
 
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp:209:100: warning: unused parameter 'visionData' [-Wunused-parameter]
-  209 | topping(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
-      |                                       ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~
+// Ultrasonic Sensors
+#define US_FRONT_TRIG_PIN 3
+#define US_FRONT_ECHO_PIN 4
+#define US_RIGHT_TRIG_PIN 5
+#define US_RIGHT_ECHO_PIN 6
+#define US_BACK_TRIG_PIN 7
+#define US_BACK_ECHO_PIN 8
+#define US_LEFT_TRIG_PIN 9
+#define US_LEFT_ECHO_PIN 10
 
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp:209:132: warning: unused parameter 'missionState' [-Wunused-parameter]
-  209 | Data, const VisionSnapshot &visionData, const MissionState &missionState)
-      |                                         ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~
+// Motor Driver (L298N)
+#define MOTOR_ENA_PIN 12
+#define MOTOR_IN1_PIN 13
+#define MOTOR_IN2_PIN A0
 
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp: In member function 'NavigationCommand PathPlanner::planForParking(const SensorData&, const VisionSnapshot&, const MissionState&)':
-/home/pi/wro2025_vehicle/src/control/path_planner.cpp:225:99: warning: unused parameter 'visionData' [-Wunused-parameter]
-  225 | Parking(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
-      |                                       ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~
+// Servo Motor
+#define SERVO_PIN 11
 
-make[2]: *** [CMakeFiles/WRO2025_Vehicle_Controller.dir/build.make:146: CMakeFiles/WRO2025_Vehicle_Controller.dir/src/control/path_planner.cpp.o] Error 1
-make[1]: *** [CMakeFiles/Makefile2:83: CMakeFiles/WRO2025_Vehicle_Controller.dir/all] Error 2
-make: *** [Makefile:91: all] Error 2
-pi@pi:~/wro2025_vehicle/build $ 
+// IMU (MPU6050) - Uses I2C
+// SDA -> A4
+// SCL -> A5
 
-// mission_state.h
-// Tracks the overall state of the mission (Open/Obstacle, phase, scoring conditions)
+// Start Button
+#define START_BUTTON_PIN 2
 
-#ifndef MISSION_STATE_H
-#define MISSION_STATE_H
+// Status LED (optional, for debugging)
+#define STATUS_LED_PIN A1
 
-#include <cstdint>
+// -----------------------------
+// Vehicle Configuration
+// -----------------------------
 
-enum class ChallengeType
+// Motor configuration
+#define MOTOR_MIN_SPEED 0
+#define MOTOR_MAX_SPEED 255
+#define MOTOR_STOP 0
+
+// Servo configuration
+#define SERVO_MIN_ANGLE 0
+#define SERVO_MAX_ANGLE 180
+#define SERVO_CENTER_ANGLE 90
+
+// Ultrasonic sensor configuration
+#define US_MAX_DISTANCE 200     // Maximum distance we want to measure (in cm)
+#define US_MEASURE_INTERVAL 100 // Time between measurements (in milliseconds)
+
+// Watchdog configuration
+#define WATCHDOG_TIMEOUT 500 // Time in ms to wait for heartbeat before emergency stop
+
+// Communication
+#define SERIAL_BAUD_RATE 115200
+#define COMMUNICATION_TIMEOUT 1000 // Time in ms to wait for valid packet
+
+#endif // CONFIG_H// e_stop.cpp
+// Implementation of the emergency stop handler
+
+#include "e_stop.h"
+// We'll need to include the motor and servo controllers
+// In a full implementation, you might use forward declarations or pass references
+// For now, we'll assume these functions exist or are declared elsewhere
+// #include "actuators/motor_controller.h"
+// #include "actuators/servo_controller.h"
+
+// Since we don't have direct access to motor/servo controllers here,
+// we'll use the pin definitions from config.h
+#include "config.h"
+
+EStopHandler::EStopHandler() : _eStopActive(false)
 {
-    UNKNOWN,
-    OPEN_CHALLENGE,
-    OBSTACLE_CHALLENGE
-};
-
-enum class MissionPhase
-{
-    PRE_START,         // Before physical button press
-    WAITING_FOR_GO,    // After button press, waiting for Pi's "GO" command
-    DRIVING_LAPS,      // Driving the 3 main laps
-    FINDING_PARKING,   // (Obstacle only) Finding the parking lot entrance
-    PARKING,           // (Obstacle only) Executing the parking maneuver
-    STOPPING_AT_START, // Stopping in the start section (Open) or finishing (Obstacle)
-    COMPLETED,         // Mission successfully finished
-    EMERGENCY_STOPPED  // Stopped due to E-Stop or error
-};
-
-enum class StartPosition
-{
-    UNKNOWN,
-    REGULAR_ZONE, // Started in the middle zone above parking lot
-    PARKING_LOT   // Started inside the parking lot
-};
-
-class MissionState
-{
-public:
-    MissionState();
-
-    // Getters
-    ChallengeType getChallengeType() const { return challengeType; }
-    MissionPhase getPhase() const { return phase; }
-    StartPosition getStartPosition() const { return startPosition; }
-    int getCurrentLap() const { return currentLap; }
-    bool isLapCompleted() const { return lapCompleted; }
-    bool isInStartSection() const { return inStartSection; }
-    bool isNearParkingLot() const { return nearParkingLot; } // For Obstacle challenge
-
-    // Setters (Called by other modules)
-    void setChallengeType(ChallengeType type) { challengeType = type; }
-    void setPhase(MissionPhase newPhase);
-    void setStartPosition(StartPosition pos) { startPosition = pos; }
-    void setCurrentLap(int lap) { currentLap = lap; }
-    void setLapCompleted(bool completed) { lapCompleted = completed; }
-    void setInStartSection(bool inStart) { inStartSection = inStart; }
-    void setNearParkingLot(bool near) { nearParkingLot = near; }
-
-    // Utility functions
-    bool isObstacleChallenge() const { return challengeType == ChallengeType::OBSTACLE_CHALLENGE; }
-    bool isOpenChallenge() const { return challengeType == ChallengeType::OPEN_CHALLENGE; }
-    bool isDrivingPhase() const
-    {
-        return phase == MissionPhase::DRIVING_LAPS ||
-               phase == MissionPhase::FINDING_PARKING ||
-               phase == MissionPhase::PARKING ||
-               phase == MissionPhase::STOPPING_AT_START;
-    }
-
-private:
-    ChallengeType challengeType;
-    MissionPhase phase;
-    StartPosition startPosition;
-
-    int currentLap;      // 0-based (0, 1, 2)
-    bool lapCompleted;   // Flag for lap completion logic
-    bool inStartSection; // Flag set by lap counter/navigation when in start zone
-    bool nearParkingLot; // Flag set by navigation when approaching parking lot (Obstacle)
-};
-
-#endif // MISSION_STATE_H
-
-// control/path_planner.cpp
-// Implementation of PathPlanner
-
-#include "path_planner.h"
-#include <iostream>
-#include <algorithm> // For std::max, std::min
-#include "../navigation/mission_state.h"
-PathPlanner::PathPlanner() : lastKnownChallenge(MissionState::ChallengeType::UNKNOWN)
-{
-    // Constructor
 }
 
-bool PathPlanner::initialize(std::shared_ptr<LapCounter> lapCounter /*, std::shared_ptr<SignDetector> signDetector*/)
+void EStopHandler::initialize()
 {
-    if (!lapCounter /* || !signDetector */)
+    // Emergency stop state is managed internally
+    // In a more complex system, you might have a physical e-stop button
+    // For now, we rely on software commands
+    _eStopActive = false;
+}
+
+void EStopHandler::activateEStop()
+{
+    // Only activate if not already active
+    if (!_eStopActive)
     {
-        std::cerr << "PathPlanner: Invalid dependencies provided." << std::endl;
-        return false;
+        _eStopActive = true;
+
+        // Immediately stop the motor
+        // In a full implementation, you would call motorController.stop()
+        digitalWrite(MOTOR_ENA_PIN, LOW);
+        digitalWrite(MOTOR_IN1_PIN, LOW);
+        digitalWrite(MOTOR_IN2_PIN, LOW);
+
+        // Center the servo (safe steering position)
+        // In a full implementation, you would call servoController.center()
+        // For now, we'll assume a servo object is available or we control the pin directly
+        // This is a simplification - normally you'd use the Servo library functions
+
+        // Indicate emergency stop activation with LED
+        digitalWrite(STATUS_LED_PIN, HIGH);
     }
-    this->lapCounter = lapCounter;
-    // this->signDetector = signDetector;
-    std::cout << "PathPlanner: Initialized with dependencies." << std::endl;
+}
+
+bool EStopHandler::isEStopActive() const
+{
+    return _eStopActive;
+}
+
+void EStopHandler::resetEStop()
+{
+    // Only reset if currently in e-stop state
+    if (_eStopActive)
+    {
+        _eStopActive = false;
+
+        // Turn off emergency stop indicator
+        digitalWrite(STATUS_LED_PIN, LOW);
+    }
+}
+
+void EStopHandler::handleEStopCommand()
+{
+    // Simply activate the emergency stop when command is received
+    activateEStop();
+}// e_stop.h
+// Handles emergency stop functionality for immediate vehicle halt
+
+#ifndef E_STOP_H
+#define E_STOP_H
+
+#include <Arduino.h>
+
+class EStopHandler
+{
+public:
+    EStopHandler();
+
+    // Initialize the emergency stop handler
+    void initialize();
+
+    // Activate emergency stop - immediately stops all vehicle movement
+    void activateEStop();
+
+    // Check if emergency stop is currently active
+    bool isEStopActive() const;
+
+    // Reset emergency stop condition (only call after resolving the cause)
+    void resetEStop();
+
+    // Handle emergency stop command from serial communication
+    void handleEStopCommand();
+
+private:
+    bool _eStopActive;
+};
+
+#endif // E_STOP_H// imu_handler.cpp
+// Implementation of the IMU handler for MPU6050
+
+#include "imu_handler.h"
+#include <Wire.h>
+
+// MPU6050 I2C address
+#define MPU6050_ADDRESS 0x68
+
+// MPU6050 registers
+#define MPU6050_RA_PWR_MGMT_1 0x6B
+#define MPU6050_RA_ACCEL_XOUT_H 0x3B
+#define MPU6050_RA_GYRO_XOUT_H 0x43
+#define MPU6050_RA_WHO_AM_I 0x75
+
+// Configuration registers
+#define MPU6050_RA_CONFIG 0x1A
+#define MPU6050_RA_GYRO_CONFIG 0x1B
+#define MPU6050_RA_ACCEL_CONFIG 0x1C
+
+// Power management
+#define MPU6050_PWR1_SLEEP_BIT 6
+#define MPU6050_PWR1_CLKSEL_BIT 2
+#define MPU6050_PWR1_CLKSEL_LENGTH 3
+
+// Gyro configuration
+#define MPU6050_GYRO_FS_250 0x00
+#define MPU6050_GYRO_FS_500 0x01
+#define MPU6050_GYRO_FS_1000 0x02
+#define MPU6050_GYRO_FS_2000 0x03
+
+// Accelerometer configuration
+#define MPU6050_ACCEL_FS_2 0x00
+#define MPU6050_ACCEL_FS_4 0x01
+#define MPU6050_ACCEL_FS_8 0x02
+#define MPU6050_ACCEL_FS_16 0x03
+
+IMUHandler::IMUHandler() : _initialized(false),
+                           accelXOffset(0), accelYOffset(0), accelZOffset(0),
+                           gyroXOffset(0), gyroYOffset(0), gyroZOffset(0)
+{
+}
+
+bool IMUHandler::initialize()
+{
+    Wire.begin();
+
+    // Check if sensor is connected
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(MPU6050_RA_WHO_AM_I);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU6050_ADDRESS, 1, true);
+
+    if (Wire.available())
+    {
+        uint8_t deviceId = Wire.read();
+        if (deviceId != 0x68)
+        {
+            return false; // Not the expected device ID
+        }
+    }
+    else
+    {
+        return false; // No response from sensor
+    }
+
+    // Wake up the MPU-6050
+    writeRegister(MPU6050_RA_PWR_MGMT_1, 0x00);
+
+    // Set clock source to X Gyro
+    writeRegister(MPU6050_RA_PWR_MGMT_1, 0x01);
+
+    // Configure accelerometer range (+/- 2g)
+    writeRegister(MPU6050_RA_ACCEL_CONFIG, MPU6050_ACCEL_FS_2 << 3);
+
+    // Configure gyro range (+/- 250 deg/s)
+    writeRegister(MPU6050_RA_GYRO_CONFIG, MPU6050_GYRO_FS_250 << 3);
+
+    // Set digital low pass filter
+    writeRegister(MPU6050_RA_CONFIG, 0x03); // ~44Hz bandwidth
+
+    _initialized = true;
     return true;
 }
 
-NavigationCommand PathPlanner::plan(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
+bool IMUHandler::readData(IMUData &data)
 {
-
-    // Update internal state if challenge type changed
-    if (missionState.getChallengeType() != lastKnownChallenge)
+    if (!_initialized)
     {
-        lastKnownChallenge = missionState.getChallengeType();
-        std::cout << "PathPlanner: Challenge type changed to "
-                  << (lastKnownChallenge == MissionState::ChallengeType::OPEN_CHALLENGE ? "Open" : "Obstacle")
-                  << std::endl;
+        return false;
     }
 
-    // Dispatch to specific planning logic based on mission phase and challenge type
-    switch (missionState.getPhase())
+    int16_t ax, ay, az, gx, gy, gz;
+    readRawData(&ax, &ay, &az, &gx, &gy, &gz);
+
+    // Convert raw values to meaningful units
+    // Accelerometer: 2g range, 16384 LSB/g
+    data.accelX = (ax - accelXOffset) / 16384.0f;
+    data.accelY = (ay - accelYOffset) / 16384.0f;
+    data.accelZ = (az - accelZOffset) / 16384.0f;
+
+    // Gyroscope: 250 deg/s range, 131 LSB/(deg/s)
+    data.gyroX = (gx - gyroXOffset) / 131.0f;
+    data.gyroY = (gy - gyroYOffset) / 131.0f;
+    data.gyroZ = (gz - gyroZOffset) / 131.0f;
+
+    // Temperature: 340 LSB/°C, -15.5556 LSB/°C offset
+    // Note: This is a simplified temperature conversion
+    data.temperature = 0.0f; // Placeholder - would need proper implementation
+
+    return true;
+}
+
+void IMUHandler::calibrate()
+{
+    if (!_initialized)
     {
+        return;
+    }
+
+    // Reset offsets
+    accelXOffset = 0;
+    accelYOffset = 0;
+    accelZOffset = 0;
+    gyroXOffset = 0;
+    gyroYOffset = 0;
+    gyroZOffset = 0;
+
+    // Collect samples for calibration
+    const int samples = 1000;
+    long accelXSum = 0, accelYSum = 0, accelZSum = 0;
+    long gyroXSum = 0, gyroYSum = 0, gyroZSum = 0;
+
+    for (int i = 0; i < samples; i++)
+    {
+        int16_t ax, ay, az, gx, gy, gz;
+        readRawData(&ax, &ay, &az, &gx, &gy, &gz);
+
+        accelXSum += ax;
+        accelYSum += ay;
+        accelZSum += az;
+        gyroXSum += gx;
+        gyroYSum += gy;
+        gyroZSum += gz;
+
+        delay(5); // Small delay between samples
+    }
+
+    // Calculate average offsets
+    accelXOffset = accelXSum / samples;
+    accelYOffset = accelYSum / samples;
+    accelZOffset = accelZSum / samples - 16384; // Subtract 1g for Z-axis
+    gyroXOffset = gyroXSum / samples;
+    gyroYOffset = gyroYSum / samples;
+    gyroZOffset = gyroZSum / samples;
+}
+
+int16_t IMUHandler::readRegister16(uint8_t reg)
+{
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(reg);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU6050_ADDRESS, 2, true);
+
+    if (Wire.available() < 2)
+    {
+        return 0;
+    }
+
+    int16_t value = (Wire.read() << 8) | Wire.read();
+    return value;
+}
+
+void IMUHandler::writeRegister(uint8_t reg, uint8_t value)
+{
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(reg);
+    Wire.write(value);
+    Wire.endTransmission(true);
+}
+
+void IMUHandler::readRawData(int16_t *ax, int16_t *ay, int16_t *az,
+                             int16_t *gx, int16_t *gy, int16_t *gz)
+{
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(MPU6050_RA_ACCEL_XOUT_H);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU6050_ADDRESS, 14, true); // Read 14 bytes (accel + temp + gyro)
+
+    if (Wire.available() == 14)
+    {
+        *ax = (Wire.read() << 8) | Wire.read();
+        *ay = (Wire.read() << 8) | Wire.read();
+        *az = (Wire.read() << 8) | Wire.read();
+        // Skip temperature for now
+        Wire.read();
+        Wire.read();
+        *gx = (Wire.read() << 8) | Wire.read();
+        *gy = (Wire.read() << 8) | Wire.read();
+        *gz = (Wire.read() << 8) | Wire.read();
+    }
+}// imu_handler.h
+// Handles communication with the MPU6050 IMU sensor
+
+#ifndef IMU_HANDLER_H
+#define IMU_HANDLER_H
+
+#include <Arduino.h>
+
+// Structure to hold IMU data
+struct IMUData
+{
+    float accelX;
+    float accelY;
+    float accelZ;
+    float gyroX;
+    float gyroY;
+    float gyroZ;
+    float temperature;
+    // For more advanced implementations, you might add:
+    // float yaw, pitch, roll; // If using DMP or sensor fusion
+};
+
+class IMUHandler
+{
+public:
+    IMUHandler();
+    bool initialize();
+    bool readData(IMUData &data);
+    void calibrate();
+
+private:
+    bool _initialized;
+    // Calibration offsets
+    float accelXOffset;
+    float accelYOffset;
+    float accelZOffset;
+    float gyroXOffset;
+    float gyroYOffset;
+    float gyroZOffset;
+
+    // Private helper functions
+    int16_t readRegister16(uint8_t reg);
+    void writeRegister(uint8_t reg, uint8_t value);
+    void readRawData(int16_t *ax, int16_t *ay, int16_t *az,
+                     int16_t *gx, int16_t *gy, int16_t *gz);
+};
+
+#endif // IMU_HANDLER_H// motor_controller.cpp
+// Implementation of the motor controller for L298N
+
+#include "motor_controller.h"
+
+MotorController::MotorController() : _enaPin(0), _in1Pin(0), _in2Pin(0), _currentSpeed(0)
+{
+}
+
+void MotorController::initialize(uint8_t enaPin, uint8_t in1Pin, uint8_t in2Pin)
+{
+    _enaPin = enaPin;
+    _in1Pin = in1Pin;
+    _in2Pin = in2Pin;
+    digitalWrite(_enaPin, LOW);
+    digitalWrite(_in1Pin, LOW);
+    digitalWrite(_in2Pin, LOW);
+    // Set pin modes
+    pinMode(_enaPin, OUTPUT);
+    pinMode(_in1Pin, OUTPUT);
+    pinMode(_in2Pin, OUTPUT);
+    _currentSpeed = 0;
+    // Initialize motor to stopped state
+    stop();
+}
+
+void MotorController::setSpeed(int speed)
+{
+    // Constrain speed to valid range
+    if (speed > 255)
+        speed = 255;
+    if (speed < -255)
+        speed = -255;
+
+    _currentSpeed = speed;
+
+    if (speed == 0)
+    {
+        // Stop the motor
+        digitalWrite(_in1Pin, LOW);
+        digitalWrite(_in2Pin, LOW);
+        analogWrite(_enaPin, 0);
+    }
+    else if (speed > 0)
+    {
+        // Forward direction
+        _setMotorDirection(true);
+        analogWrite(_enaPin, speed);
+    }
+    else
+    {
+        // Reverse direction
+        _setMotorDirection(false);
+        analogWrite(_enaPin, -speed);
+    }
+}
+
+void MotorController::stop()
+{
+    _currentSpeed = 0;
+    digitalWrite(_in1Pin, LOW);
+    digitalWrite(_in2Pin, LOW);
+    analogWrite(_enaPin, 0);
+}
+
+int MotorController::getCurrentSpeed() const
+{
+    return _currentSpeed;
+}
+
+void MotorController::_setMotorDirection(bool forward)
+{
+    if (forward)
+    {
+        digitalWrite(_in1Pin, HIGH);
+        digitalWrite(_in2Pin, LOW);
+    }
+    else
+    {
+        digitalWrite(_in1Pin, LOW);
+        digitalWrite(_in2Pin, HIGH);
+    }
+}// motor_controller.h
+// Handles control of the vehicle's driving motor via L298N
+
+#ifndef MOTOR_CONTROLLER_H
+#define MOTOR_CONTROLLER_H
+
+#include <Arduino.h>
+
+class MotorController
+{
+public:
+    MotorController();
+    void initialize(uint8_t enaPin, uint8_t in1Pin, uint8_t in2Pin);
+    void setSpeed(int speed); // Speed from -255 (full reverse) to 255 (full forward)
+    void stop();
+    int getCurrentSpeed() const;
+
+private:
+    uint8_t _enaPin;
+    uint8_t _in1Pin;
+    uint8_t _in2Pin;
+    int _currentSpeed;
+    void _setMotorDirection(bool forward);
+};
+
+#endif // MOTOR_CONTROLLER_H// serial_parser.cpp
+// Implementation of the serial parser
+
+#include "serial_parser.h"
+
+SerialParser::SerialParser() : currentState(STATE_IDLE), dataBytesReceived(0)
+{
+    // Initialize the current packet
+    memset(&currentPacket, 0, sizeof(Packet));
+}
+
+bool SerialParser::readPacket(Packet &packet)
+{
+    while (Serial.available())
+    {
+        byte incomingByte = Serial.read();
+
+        switch (currentState)
+        {
+        case STATE_IDLE:
+            if (incomingByte == PACKET_START_BYTE)
+            {
+                currentState = STATE_START_RECEIVED;
+            }
+            break;
+
+        case STATE_START_RECEIVED:
+            currentPacket.command = incomingByte;
+            currentState = STATE_COMMAND_RECEIVED;
+            break;
+
+        case STATE_COMMAND_RECEIVED:
+            currentPacket.length = incomingByte;
+            // Validate length
+            if (currentPacket.length > PACKET_MAX_LENGTH)
+            {
+                resetParser();
+            }
+            else
+            {
+                dataBytesReceived = 0;
+                currentState = STATE_LENGTH_RECEIVED;
+            }
+            break;
+
+        case STATE_LENGTH_RECEIVED:
+            if (dataBytesReceived < currentPacket.length)
+            {
+                currentPacket.data[dataBytesReceived] = incomingByte;
+                dataBytesReceived++;
+            }
+
+            // Check if we've received all data bytes
+            if (dataBytesReceived >= currentPacket.length)
+            {
+                currentState = STATE_DATA_RECEIVED;
+            }
+            break;
+
+        case STATE_DATA_RECEIVED:
+            currentPacket.checksum = incomingByte;
+            currentState = STATE_CHECKSUM_RECEIVED;
+
+            // Validate packet
+            if (isValidPacket(currentPacket))
+            {
+                // Copy to output parameter
+                memcpy(&packet, &currentPacket, sizeof(Packet));
+                resetParser();
+                return true; // Valid packet received
+            }
+            else
+            {
+                // Invalid packet, reset parser
+                resetParser();
+            }
+            break;
+
+        default:
+            resetParser();
+            break;
+        }
+    }
+
+    return false; // No complete packet received
+}
+
+void SerialParser::sendPacket(const Packet &packet)
+{
+    // Send start byte
+    Serial.write(PACKET_START_BYTE);
+
+    // Send command
+    Serial.write(packet.command);
+
+    // Send length
+    Serial.write(packet.length);
+
+    // Send data
+    for (int i = 0; i < packet.length; i++)
+    {
+        Serial.write(packet.data[i]);
+    }
+
+    // Send checksum
+    Serial.write(packet.checksum);
+}
+
+void SerialParser::sendSensorData(unsigned int frontDist, unsigned int rightDist,
+                                  unsigned int backDist, unsigned int leftDist)
+{
+    Packet packet;
+    byte data[8];
+
+    // Pack distance data (2 bytes per distance)
+    data[0] = (frontDist >> 8) & 0xFF;
+    data[1] = frontDist & 0xFF;
+    data[2] = (rightDist >> 8) & 0xFF;
+    data[3] = rightDist & 0xFF;
+    data[4] = (backDist >> 8) & 0xFF;
+    data[5] = backDist & 0xFF;
+    data[6] = (leftDist >> 8) & 0xFF;
+    data[7] = leftDist & 0xFF;
+
+    createPacket(packet, CMD_SENSOR_DATA, 8, data);
+    sendPacket(packet);
+}
+
+void SerialParser::sendStartAck(bool started)
+{
+    Packet packet;
+    byte data[1] = {started ? 0x01 : 0x00};
+
+    createPacket(packet, CMD_START_ACK, 1, data);
+    sendPacket(packet);
+}
+
+void SerialParser::sendError(byte errorCode)
+{
+    Packet packet;
+    byte data[1] = {errorCode};
+
+    createPacket(packet, CMD_ERROR, 1, data);
+    sendPacket(packet);
+}
+
+void SerialParser::resetParser()
+{
+    currentState = STATE_IDLE;
+    dataBytesReceived = 0;
+    memset(&currentPacket, 0, sizeof(Packet));
+}
+void SerialParser::sendCompactSensorData(const CompactSensorData &data)
+{
+    Packet packet;
+
+    // Cast the struct directly to byte array for transmission
+    // This is very fast as it avoids manual packing/unpacking
+    const byte *dataPtr = reinterpret_cast<const byte *>(&data);
+    byte dataLength = sizeof(CompactSensorData); // Should be 20
+
+    // Use the existing createPacket function with our new command ID
+    createPacket(packet, CMD_ALL_SENSOR_DATA_COMPACT, dataLength, dataPtr);
+
+    // Send the packet using the existing robust sendPacket method
+    sendPacket(packet);
+}// serial_parser.h
+// Handles parsing of incoming serial data and sending packets
+
+#ifndef SERIAL_PARSER_H
+#define SERIAL_PARSER_H
+
+#include <Arduino.h>
+#include "serial_protocol.h"
+
+class SerialParser
+{
+public:
+    SerialParser();
+    bool readPacket(Packet &packet);
+    void sendPacket(const Packet &packet);
+    void sendSensorData(unsigned int frontDist, unsigned int rightDist,
+                        unsigned int backDist, unsigned int leftDist);
+    void sendStartAck(bool started);
+    void sendError(byte errorCode);
+    void sendCompactSensorData(const CompactSensorData &data);
+
+private:
+    enum ParseState
+    {
+        STATE_IDLE,
+        STATE_START_RECEIVED,
+        STATE_COMMAND_RECEIVED,
+        STATE_LENGTH_RECEIVED,
+        STATE_DATA_RECEIVED,
+        STATE_CHECKSUM_RECEIVED
+    };
+
+    ParseState currentState;
+    Packet currentPacket;
+    byte dataBytesReceived;
+
+    void resetParser();
+};
+
+#endif // SERIAL_PARSER_H// serial_protocol.cpp
+// Implementation of serial communication protocol utilities
+
+#include "serial_protocol.h"
+
+// Calculate checksum using XOR
+byte calculateChecksum(const byte *data, size_t length)
+{
+    byte checksum = 0;
+    for (size_t i = 0; i < length; i++)
+    {
+        checksum ^= data[i];
+    }
+    return checksum;
+}
+
+// Verify if a packet has a valid checksum
+bool isValidPacket(const Packet &packet)
+{
+    // Create temporary buffer for checksum calculation
+    byte tempBuffer[PACKET_MAX_LENGTH + 2]; // +2 for command and length
+    tempBuffer[0] = packet.command;
+    tempBuffer[1] = packet.length;
+
+    // Copy data bytes
+    for (int i = 0; i < packet.length && i < PACKET_MAX_LENGTH; i++)
+    {
+        tempBuffer[i + 2] = packet.data[i];
+    }
+
+    // Calculate expected checksum
+    byte expectedChecksum = calculateChecksum(tempBuffer, packet.length + 2);
+
+    // Compare with received checksum
+    return (expectedChecksum == packet.checksum);
+}
+
+// Create a packet with the specified parameters
+void createPacket(Packet &packet, byte command, byte length, const byte *data)
+{
+    packet.command = command;
+    packet.length = length;
+
+    // Copy data (up to maximum length)
+    for (int i = 0; i < length && i < PACKET_MAX_LENGTH; i++)
+    {
+        packet.data[i] = data[i];
+    }
+
+    // Create temporary buffer for checksum calculation
+    byte tempBuffer[PACKET_MAX_LENGTH + 2]; // +2 for command and length
+    tempBuffer[0] = packet.command;
+    tempBuffer[1] = packet.length;
+
+    // Copy data bytes
+    for (int i = 0; i < packet.length && i < PACKET_MAX_LENGTH; i++)
+    {
+        tempBuffer[i + 2] = packet.data[i];
+    }
+
+    // Calculate checksum
+    packet.checksum = calculateChecksum(tempBuffer, packet.length + 2);
+}// serial_protocol.h
+// Defines the serial communication protocol between Nano and Pi
+
+#ifndef SERIAL_PROTOCOL_H
+#define SERIAL_PROTOCOL_H
+
+#include <Arduino.h>
+
+// Packet structure constants
+#define PACKET_START_BYTE 0xAA
+#define PACKET_MAX_LENGTH 32
+
+// Command IDs from Pi to Nano
+#define CMD_SET_MOTOR_SPEED 0x01
+#define CMD_SET_SERVO_ANGLE 0x02
+#define CMD_EMERGENCY_STOP 0x03
+#define CMD_HEARTBEAT 0x04
+#define CMD_REQUEST_SENSOR_DATA 0x05
+#define CMD_PI_GO_SIGNAL 0x06 // <-- THIS LINE WAS MISSING
+
+// Command IDs from Nano to Pi
+#define CMD_SENSOR_DATA 0x10
+#define CMD_START_ACK 0x11
+#define CMD_ERROR 0x12
+#define CMD_ALL_SENSOR_DATA_COMPACT 0x13
+
+// Define a compact structure for ALL sensor data
+// This packs data efficiently for minimal transmission time
+// Total size: 20 bytes
+struct __attribute__((packed)) CompactSensorData
+{
+    uint16_t frontDistance; // 0-65535 cm - 2 bytes
+    uint16_t rightDistance; // 0-65535 cm - 2 bytes
+    uint16_t backDistance;  // 0-65535 cm - 2 bytes
+    uint16_t leftDistance;  // 0-65535 cm - 2 bytes
+    int16_t accelX;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+    int16_t accelY;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+    int16_t accelZ;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+    int16_t gyroX;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+    int16_t gyroY;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+    int16_t gyroZ;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+                            // Total: 20 bytes
+};
+
+// Structure for packet handling
+struct Packet
+{
+    byte command;
+    byte length;
+    byte data[PACKET_MAX_LENGTH];
+    byte checksum;
+};
+
+// Function prototypes
+byte calculateChecksum(const byte *data, size_t length);
+bool isValidPacket(const Packet &packet);
+void createPacket(Packet &packet, byte command, byte length, const byte *data);
+
+#endif // SERIAL_PROTOCOL_H// servo_controller.cpp
+// Implementation of the servo controller
+
+#include "servo_controller.h"
+
+ServoController::ServoController() : _servoPin(0), _currentAngle(90), _isAttached(false)
+{
+}
+
+void ServoController::initialize(uint8_t servoPin)
+{
+    _servoPin = servoPin;
+    _currentAngle = 90; // Default to center position
+
+    // Attach the servo to the specified pin
+    _steeringServo.attach(_servoPin);
+    _isAttached = true;
+
+    // Set to center position initially
+    _steeringServo.write(_currentAngle);
+}
+
+void ServoController::setAngle(int angle)
+{
+    // Constrain angle to valid range
+    if (angle < 0)
+        angle = 0;
+    if (angle > 180)
+        angle = 180;
+
+    _currentAngle = angle;
+
+    // Only write to servo if it's attached
+    if (_isAttached)
+    {
+        _steeringServo.write(_currentAngle);
+    }
+}
+
+void ServoController::center()
+{
+    setAngle(90);
+}
+
+int ServoController::getCurrentAngle() const
+{
+    return _currentAngle;
+}
+
+void ServoController::detach()
+{
+    if (_isAttached)
+    {
+        _steeringServo.detach();
+        _isAttached = false;
+    }
+}
+
+void ServoController::reattach()
+{
+    if (!_isAttached)
+    {
+        _steeringServo.attach(_servoPin);
+        _isAttached = true;
+        // Restore the last known position
+        _steeringServo.write(_currentAngle);
+    }
+}// servo_controller.h
+// Handles control of the vehicle's steering servo
+
+#ifndef SERVO_CONTROLLER_H
+#define SERVO_CONTROLLER_H
+
+#include <Arduino.h>
+#include <Servo.h>
+
+class ServoController
+{
+public:
+    ServoController();
+    void initialize(uint8_t servoPin);
+    void setAngle(int angle); // Angle from 0 to 180 degrees
+    void center();
+    int getCurrentAngle() const;
+    void detach();
+    void reattach();
+
+private:
+    Servo _steeringServo;
+    uint8_t _servoPin;
+    int _currentAngle;
+    bool _isAttached;
+};
+
+#endif // SERVO_CONTROLLER_H// us_sensor_array.cpp
+// Implementation of the ultrasonic sensor array handler
+
+#include "us_sensor_array.h"
+
+USSensorArray::USSensorArray() : usFront(nullptr), usRight(nullptr), usBack(nullptr), usLeft(nullptr),
+                                 maxDistance(200)
+{
+}
+
+void USSensorArray::initialize(uint8_t frontTrigPin, uint8_t frontEchoPin,
+                               uint8_t rightTrigPin, uint8_t rightEchoPin,
+                               uint8_t backTrigPin, uint8_t backEchoPin,
+                               uint8_t leftTrigPin, uint8_t leftEchoPin)
+{
+    // Delete existing objects if they exist
+    if (usFront)
+        delete usFront;
+    if (usRight)
+        delete usRight;
+    if (usBack)
+        delete usBack;
+    if (usLeft)
+        delete usLeft;
+
+    // Create new NewPing objects for each sensor
+    usFront = new NewPing(frontTrigPin, frontEchoPin, maxDistance);
+    usRight = new NewPing(rightTrigPin, rightEchoPin, maxDistance);
+    usBack = new NewPing(backTrigPin, backEchoPin, maxDistance);
+    usLeft = new NewPing(leftTrigPin, leftEchoPin, maxDistance);
+}
+
+bool USSensorArray::readData(USSensorData &data)
+{
+    // Check if sensors are initialized
+    if (!usFront || !usRight || !usBack || !usLeft)
+    {
+        return false;
+    }
+
+    // Read distances from each sensor
+    // Using ping_cm() for simplicity, though ping() with microsecond timing would be more precise
+    data.frontDistance = usFront->ping_cm();
+    data.rightDistance = usRight->ping_cm();
+    data.backDistance = usBack->ping_cm();
+    data.leftDistance = usLeft->ping_cm();
+
+    return true;
+}
+
+void USSensorArray::setMaxDistance(unsigned int maxDistance)
+{
+    this->maxDistance = maxDistance;
+
+    // If sensors are already initialized, we need to reinitialize them
+    // This is a limitation of the NewPing library
+    // In a real implementation, you might want to store the pin numbers and reinitialize
+}// us_sensor_array.h
+// Handles the ultrasonic sensor array for distance measurement
+
+#ifndef US_SENSOR_ARRAY_H
+#define US_SENSOR_ARRAY_H
+
+#include <Arduino.h>
+#include <NewPing.h>
+
+// Structure to hold ultrasonic sensor data
+struct USSensorData
+{
+    unsigned int frontDistance;
+    unsigned int rightDistance;
+    unsigned int backDistance;
+    unsigned int leftDistance;
+};
+
+class USSensorArray
+{
+public:
+    USSensorArray();
+    void initialize(uint8_t frontTrigPin, uint8_t frontEchoPin,
+                    uint8_t rightTrigPin, uint8_t rightEchoPin,
+                    uint8_t backTrigPin, uint8_t backEchoPin,
+                    uint8_t leftTrigPin, uint8_t leftEchoPin);
+    bool readData(USSensorData &data);
+    void setMaxDistance(unsigned int maxDistance);
+
+private:
+    NewPing *usFront;
+    NewPing *usRight;
+    NewPing *usBack;
+    NewPing *usLeft;
+    unsigned int maxDistance;
+};
+
+#endif // US_SENSOR_ARRAY_H// watchdog.cpp
+// Implementation of the safety watchdog
+
+#include "watchdog.h"
+
+Watchdog::Watchdog() : _timeout(0), _lastFeedTime(0), _initialized(false)
+{
+}
+
+void Watchdog::initialize(unsigned long timeoutMs)
+{
+    _timeout = timeoutMs;
+    _lastFeedTime = millis();
+    _initialized = true;
+}
+
+void Watchdog::feed()
+{
+    if (_initialized)
+    {
+        _lastFeedTime = millis();
+    }
+}
+
+bool Watchdog::isExpired()
+{
+    if (!_initialized)
+    {
+        return false; // If not initialized, don't trigger
+    }
+
+    unsigned long currentTime = millis();
+
+    // Handle millis() overflow (occurs every ~49 days)
+    if (currentTime < _lastFeedTime)
+    {
+        // Overflow occurred, treat as expired if timeout was very long (unlikely)
+        // In most cases, this means we recently fed the watchdog
+        return false;
+    }
+
+    return (currentTime - _lastFeedTime) > _timeout;
+}
+
+unsigned long Watchdog::getElapsedTime()
+{
+    if (!_initialized)
+    {
+        return 0;
+    }
+
+    unsigned long currentTime = millis();
+
+    // Handle millis() overflow
+    if (currentTime < _lastFeedTime)
+    {
+        // This is a simplification - in an overflow case, the elapsed time
+        // would be very large, indicating expiration
+        return _timeout + 1; // Ensure it appears expired
+    }
+
+    return currentTime - _lastFeedTime;
+}// watchdog.h
+// Implements a safety watchdog to monitor communication with the Pi
+
+#ifndef WATCHDOG_H
+#define WATCHDOG_H
+
+#include <Arduino.h>
+
+class Watchdog
+{
+public:
+    Watchdog();
+    void initialize(unsigned long timeoutMs);
+    void feed();                    // Reset the watchdog timer
+    bool isExpired();               // Check if the watchdog has timed out
+    unsigned long getElapsedTime(); // Get time since last feed
+
+private:
+    unsigned long _timeout;
+    unsigned long _lastFeedTime;
+    bool _initialized;
+};
+
+#endif // WATCHDOG_H// WRO2025_Nano.ino
+// Main application for WRO 2025 Nano controller
+
+// Include standard libraries
+#include <NewPing.h>
+#include <Servo.h>
+#include <Wire.h>
+
+// Include project configuration
+#include "config.h"
+
+// Include all module headers
+#include "imu_handler.h"
+#include "us_sensor_array.h"
+#include "motor_controller.h"
+#include "servo_controller.h"
+#include "serial_protocol.h"
+#include "serial_parser.h"
+#include "watchdog.h"
+#include "e_stop.h"
+
+// --- Module instances ---
+IMUHandler imuHandler;
+USSensorArray usSensorArray;
+MotorController motorController;
+ServoController servoController;
+SerialParser serialParser;
+Watchdog watchdog;
+EStopHandler eStopHandler;
+
+// --- Global State variables ---
+bool isStarted = false;         // Has the START button been pressed?
+bool missionGoReceived = false; // Has the Pi sent the "GO" command?
+unsigned long lastUSTime = 0;
+unsigned long lastIMUTime = 0;
+int motorSpeed = 0;
+int servoAngle = SERVO_CENTER_ANGLE;
+unsigned long lastHighSpeedSensorTime = 0;
+const unsigned long HIGH_SPEED_SENSOR_INTERVAL = 50; // Send combined data every 50ms (20 Hz)
+
+// Sensor data structures
+IMUData currentIMUData;
+USSensorData currentUSData;
+
+// --- Function prototypes (good practice for Arduino IDE) ---
+void processSerialCommands();
+
+void setup()
+{
+    // Initialize serial communication
+    Serial.begin(SERIAL_BAUD_RATE);
+
+    // Initialize all modules
+    imuHandler.initialize();
+    usSensorArray.initialize(
+        US_FRONT_TRIG_PIN, US_FRONT_ECHO_PIN,
+        US_RIGHT_TRIG_PIN, US_RIGHT_ECHO_PIN,
+        US_BACK_TRIG_PIN, US_BACK_ECHO_PIN,
+        US_LEFT_TRIG_PIN, US_LEFT_ECHO_PIN);
+
+    motorController.initialize(MOTOR_ENA_PIN, MOTOR_IN1_PIN, MOTOR_IN2_PIN);
+    servoController.initialize(SERVO_PIN);
+
+    watchdog.initialize(WATCHDOG_TIMEOUT);
+    eStopHandler.initialize();
+
+    // Setup start button with internal pull-up
+    pinMode(START_BUTTON_PIN, INPUT_PULLUP);
+
+    // Setup status LED
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    digitalWrite(STATUS_LED_PIN, LOW);
+
+    // Small delay to allow sensors to stabilize
+    delay(100);
+
+    // Calibrate IMU (this will take some time)
+    // In a competition setting, you might want to do this during preparation time
+    // rather than during the setup phase
+    // imuHandler.calibrate();
+
+    // Indicate setup complete
+    digitalWrite(STATUS_LED_PIN, HIGH);
+    delay(100);
+    digitalWrite(STATUS_LED_PIN, LOW);
+    // Reset timers to start fresh after setup indication
+    lastUSTime = millis();
+    lastIMUTime = millis();
+    lastHighSpeedSensorTime = millis();
+}
+
+void loop()
+{
+    // --- PRE-START PHASE ---
+    // Wait for the physical start button press
+    if (!isStarted)
+    {
+        // Continuously process commands (e.g., heartbeat to keep watchdog happy)
+        processSerialCommands();
+
+        // Check for the physical start button press
+        if (digitalRead(START_BUTTON_PIN) == LOW)
+        {              // Assuming pull-up, LOW = pressed
+            delay(20); // Debounce
+            if (digitalRead(START_BUTTON_PIN) == LOW)
+            { // Check again after debounce
+                isStarted = true;
+                digitalWrite(STATUS_LED_PIN, HIGH); // Visual confirmation
+
+                // Send start acknowledgment to Pi
+                serialParser.sendStartAck(true);
+
+                // Reset timestamps for immediate sensor reads on start
+                lastUSTime = millis();
+                lastIMUTime = millis();
+                lastHighSpeedSensorTime = millis();
+
+                // Do not 'return' here, let the loop continue to the operational phase
+                // The state change (isStarted = true) will take effect next iteration
+            }
+        }
+        // If not started, ONLY processSerialCommands and check button
+        return; // Exit loop early, wait for next iteration
+    }
+
+    // --- OPERATIONAL PHASE (isStarted == true) ---
+
+    // 1. Process incoming serial commands (Priority 1: React to commands immediately)
+    processSerialCommands();
+
+    // 2. Wait for explicit GO command from Pi before doing main tasks
+    if (!missionGoReceived)
+    {
+        // We are started (button pressed) but waiting for Pi's GO signal.
+        // Only processSerialCommands and watchdog (for safety) are active.
+        // Check watchdog even in this state to catch communication loss immediately
+        if (watchdog.isExpired())
+        {
+            eStopHandler.activateEStop();
+        }
+        delay(10); // Small delay to prevent busy-waiting
+        return;    // Do not proceed with sensors/actuators until GO received
+    }
+
+    // --- MAIN OPERATIONAL LOOP (runs only AFTER missionGoReceived == true) ---
+    unsigned long currentTime = millis();
+
+    // 3. Read sensors at defined intervals
+    // Read ultrasonic sensors
+    if (currentTime - lastUSTime > US_MEASURE_INTERVAL)
+    {
+        if (usSensorArray.readData(currentUSData))
+        {
+            // Optional: Send individual US updates if needed by Pi logic frequently
+            // serialParser.sendSensorData(...);
+        }
+        lastUSTime = currentTime;
+    }
+
+    // Read IMU data (more frequently than US sensors if needed, but we send combined)
+    if (currentTime - lastIMUTime > 50)
+    {                                        // e.g., 20Hz
+        imuHandler.readData(currentIMUData); // Result stored in currentIMUData
+        lastIMUTime = currentTime;
+    }
+
+    // Send ALL sensor data together at high speed
+    if (currentTime - lastHighSpeedSensorTime > HIGH_SPEED_SENSOR_INTERVAL)
+    {
+        // Prepare the compact data structure
+        CompactSensorData compactData;
+
+        // Fill US data (convert from unsigned int to uint16_t)
+        compactData.frontDistance = static_cast<uint16_t>(currentUSData.frontDistance);
+        compactData.rightDistance = static_cast<uint16_t>(currentUSData.rightDistance);
+        compactData.backDistance = static_cast<uint16_t>(currentUSData.backDistance);
+        compactData.leftDistance = static_cast<uint16_t>(currentUSData.leftDistance);
+
+        // Fill IMU data (scale floats to integers for compact transmission)
+        compactData.accelX = static_cast<int16_t>(currentIMUData.accelX * 1000.0f); // Convert g to milli-g
+        compactData.accelY = static_cast<int16_t>(currentIMUData.accelY * 1000.0f);
+        compactData.accelZ = static_cast<int16_t>(currentIMUData.accelZ * 1000.0f);
+        compactData.gyroX = static_cast<int16_t>(currentIMUData.gyroX * 1000.0f); // Convert deg/s to milli-deg/s
+        compactData.gyroY = static_cast<int16_t>(currentIMUData.gyroY * 1000.0f);
+        compactData.gyroZ = static_cast<int16_t>(currentIMUData.gyroZ * 1000.0f);
+
+        // Send the compact data packet - This is the FASTEST way
+        serialParser.sendCompactSensorData(compactData);
+
+        lastHighSpeedSensorTime = currentTime;
+    }
+
+    // 4. Update actuators with current values (only if e-stop is not active)
+    if (!eStopHandler.isEStopActive())
+    {
+        motorController.setSpeed(motorSpeed);
+        servoController.setAngle(servoAngle);
+    }
+
+    // 5. Check watchdog (Priority: Safety)
+    if (watchdog.isExpired())
+    {
+        eStopHandler.activateEStop();
+    }
+
+    // Small delay to prevent overwhelming the system
+    delay(5);
+}
+
+// --- Function Definitions ---
+
+// Function to process incoming serial commands
+void processSerialCommands()
+{
+    Packet packet;
+
+    // Try to read a packet
+    if (serialParser.readPacket(packet))
+    {
+        // Process valid packet
+        switch (packet.command)
+        {
+        case CMD_SET_MOTOR_SPEED:
+            if (packet.length >= 1)
+            {
+                // Convert byte to signed int (-128 to 127 mapped to -255 to 255)
+                int8_t speedByte = (int8_t)packet.data[0];
+                motorSpeed = map(speedByte, -128, 127, -MOTOR_MAX_SPEED, MOTOR_MAX_SPEED);
+
+                // Feed watchdog when receiving motor commands
+                watchdog.feed();
+            }
+            break;
+
+        case CMD_SET_SERVO_ANGLE:
+            if (packet.length >= 1)
+            {
+                servoAngle = packet.data[0];
+                if (servoAngle > SERVO_MAX_ANGLE)
+                    servoAngle = SERVO_MAX_ANGLE;
+                if (servoAngle < SERVO_MIN_ANGLE)
+                    servoAngle = SERVO_MIN_ANGLE;
+
+                // Feed watchdog when receiving servo commands
+                watchdog.feed();
+            }
+            break;
+
+        case CMD_EMERGENCY_STOP:
+            eStopHandler.activateEStop();
+            break;
+
+        case CMD_HEARTBEAT:
+            // Feed the watchdog on heartbeat
+            watchdog.feed();
+            break;
+
+        case CMD_REQUEST_SENSOR_DATA:
+            // Send current US sensor data (consider adding IMU if needed separately)
+            serialParser.sendSensorData(
+                currentUSData.frontDistance,
+                currentUSData.rightDistance,
+                currentUSData.backDistance,
+                currentUSData.leftDistance);
+            break;
+
+        case CMD_PI_GO_SIGNAL:
+            // Pi signals the start of the mission run
+            if (isStarted)
+            { // Only accept GO if button was pressed first (Rule 9.11)
+                missionGoReceived = true;
+                // Optional: Send an ack back to Pi confirming GO received
+                // serialParser.sendAck(CMD_PI_GO_SIGNAL); // You'd need to implement sendAck
+                // Blink LED quickly to indicate GO
+                digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+                delay(50);
+                digitalWrite(STATUS_LED_PIN, HIGH); // Ensure LED stays on
+            }
+            else
+            {
+                // GO received before button press - protocol error
+                serialParser.sendError(0x02); // Define error code, e.g., "GO before START"
+            }
+            break;
+
+        default:
+            // Unknown command, send error
+            serialParser.sendError(0x01); // Unknown command error
+            break;
+        }
+    }
+}arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/WRO2025_Nano$ 
+
+
+
+
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle$ tree
+.
+├── build
+├── CMakeLists.txt
+├── docs
+│   └── README.md
+├── include
+├── lib
+├── LICENSE
+├── photos
+├── scripts
+│   └── run_vehicle.sh
+├── src
+│   ├── actuators
+│   │   ├── vehicle_controller.cpp
+│   │   └── vehicle_controller.h
+│   ├── communication
+│   │   ├── serial_handler.cpp
+│   │   ├── serial_handler.h
+│   │   ├── serial_protocol.cpp
+│   │   └── serial_protocol.h
+│   ├── config
+│   │   ├── vehicle_config.cpp
+│   │   └── vehicle_config.h
+│   ├── control
+│   │   ├── parking_assistant.cpp
+│   │   ├── parking_assistant.h
+│   │   ├── path_planner.cpp
+│   │   ├── path_planner.h
+│   │   ├── trajectory_generator.cpp
+│   │   └── trajectory_generator.h
+│   ├── main.cpp
+│   ├── navigation
+│   │   ├── course_map.cpp
+│   │   ├── course_map.h
+│   │   ├── lap_counter.cpp
+│   │   ├── lap_counter.h
+│   │   ├── mission_state.cpp
+│   │   ├── mission_state.h
+│   │   ├── positional_memory.cpp
+│   │   ├── positional_memory.h
+│   │   ├── sign_detector.cpp
+│   │   └── sign_detector.h
+│   ├── sensors
+│   │   ├── sensor_data.h
+│   │   ├── sensor_fusion.cpp
+│   │   └── sensor_fusion.h
+│   ├── utils
+│   │   ├── logger.h
+│   │   ├── math_utils.h
+│   │   ├── timer.cpp
+│   │   └── timer.h
+│   └── vision
+│       ├── camera_interface.cpp
+│       ├── camera_interface.h
+│       ├── color_detector.cpp
+│       ├── color_detector.h
+│       ├── edge_detector.cpp
+│       ├── edge_detector.h
+│       ├── frame_buffer.cpp
+│       ├── frame_buffer.h
+│       ├── image_processor.cpp
+│       ├── image_processor.h
+│       ├── line_follower.cpp
+│       ├── line_follower.h
+│       ├── roi_selector.cpp
+│       └── roi_selector.h
+└── videos
+
+17 directories, 50 files
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle$ cat *
+cat: build: Is a directory
+# CMakeLists.txt
+# Build configuration for WRO 2025 Pi-side application (C++ version)
+
+cmake_minimum_required(VERSION 3.10)
+
+# Set the project name and version
+project(WRO2025_Vehicle_Controller VERSION 1.0)
+
+# Specify the C++ standard (C++17 is common for modern Pi projects)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+# --- Find Required Libraries ---
+# Find OpenCV package (adjust COMPONENTS as needed, e.g., imgproc, videoio, video)
+# This assumes OpenCV is installed on the Pi (e.g., via apt install libopencv-dev)
+find_package(OpenCV REQUIRED)
+
+# --- Source Files ---
+# Recursively find all .cpp files in the src directory and its subdirectories
+# This is convenient but can sometimes be less explicit than listing files.
+# For better control, especially in larger projects, you might list source files explicitly.
+# Ensure the GLOB_RECURSE pattern matches your actual source structure.
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+
+# --- Executable ---
+# Create the executable named after the project
+# **** THIS MUST COME BEFORE target_* commands ****
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+# --- Include Directories ---
+# Add the 'src' directory to the include path
+# This allows #include "module/submodule/header.h" to work relative to src/
+# **** THIS MUST COME AFTER add_executable ****
+target_include_directories(${PROJECT_NAME} PRIVATE src)
+
+# --- Link Libraries ---
+# Link the required libraries to the executable
+# Link OpenCV libraries found by find_package
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+
+# --- Compiler Options (Optional but useful for development) ---
+# Add warnings, optimizations, etc.
+# -Wall: Enable most common warnings
+# -Wextra: Enable extra warnings
+# -O2: Optimization level 2 (balance between speed and compilation time)
+# -g: Include debugging information (useful for debugging with gdb)
+# -DNDEBUG: Define NDEBUG to disable asserts in release builds (optional)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -O2 -g)
+# Uncomment the line below for release builds to disable asserts
+# target_compile_definitions(${PROJECT_NAME} PRIVATE -DNDEBUG)
+
+# --- Optional: Enable Logging for Debug Builds ---
+# To enable the LOG_DEBUG, LOG_INFO, etc. macros from src/utils/logger.h,
+# uncomment the line below. Comment it out for final competition builds.
+ target_compile_definitions(${PROJECT_NAME} PRIVATE LOG_LEVEL=5)
+
+# --- Installation (Optional) ---
+# Define where the executable should be installed (e.g., 'sudo make install')
+# install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+# --- Custom Targets (Optional) ---
+# You could add a custom target to run your vehicle script, if you create one
+# add_custom_target(run
+#     COMMAND ${PROJECT_NAME}
+#     DEPENDS ${PROJECT_NAME}
+#     WORKING_DIRECTORY ${CMAKE_PROJECT_DIR}
+# )cat: docs: Is a directory
+cat: include: Is a directory
+cat: lib: Is a directory
+cat: photos: Is a directory
+cat: scripts: Is a directory
+cat: src: Is a directory
+cat: videos: Is a directory
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle$ cat src/*
+cat: src/actuators: Is a directory
+cat: src/communication: Is a directory
+cat: src/config: Is a directory
+cat: src/control: Is a directory
+// main.cpp
+// Entry point for the WRO 2025 Pi-side application
+
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include <atomic>
+#include <signal.h>
+#include <memory> // For shared_ptr
+
+// Include our module headers
+#include "config/vehicle_config.h"
+#include "communication/serial_handler.h"
+#include "sensors/sensor_data.h"
+#include "vision/camera_interface.h"
+#include "vision/image_processor.h"
+#include "navigation/mission_state.h" // Include for MissionPhase enum
+#include "navigation/positional_memory.h"
+#include "navigation/lap_counter.h"
+#include "control/path_planner.h"
+#include "actuators/vehicle_controller.h"
+
+// --- Global State ---
+std::atomic<bool> g_shutdownRequested(false);
+
+// --- Forward Declarations ---
+void signalHandler(int signal);
+void initializeSystem();
+bool initializeModules();
+void shutdownModules();
+void runMainLoop();
+void handlePreStart();
+void handleWaitingForGo();
+void handleDriving();
+void handleStoppingAtStart();
+void handleParking();
+void handleCompleted();
+void handleEmergencyStopped();
+
+// --- Module Pointers (Global for simplicity in main.cpp) ---
+std::shared_ptr<SerialHandler> g_serialHandler;
+std::shared_ptr<CameraInterface> g_cameraInterface;
+std::shared_ptr<ImageProcessor> g_imageProcessor;
+std::shared_ptr<LapCounter> g_lapCounter;
+std::shared_ptr<PathPlanner> g_pathPlanner;
+std::shared_ptr<VehicleController> g_vehicleController;
+std::shared_ptr<MissionState> g_missionState;
+std::shared_ptr<PositionalMemory> g_positionalMemory;
+extern std::atomic<bool> g_shutdownRequested;
+void signalHandler(int signal)
+{
+    if (signal == SIGINT || signal == SIGTERM)
+    {
+        std::cout << "\nSignal (" << signal << ") received. Requesting graceful shutdown..." << std::endl;
+        g_shutdownRequested.store(true); // Set the atomic flag
+    }
+    else
+    {
+        std::cout << "\nUnhandled signal (" << signal << ") received. Requesting shutdown..." << std::endl;
+        g_shutdownRequested.store(true);
+    }
+}
+int main(int argc, char *argv[])
+{
+    (void)argc; // Explicitly mark as unused
+    (void)argv;
+    std::cout << "WRO 2025 Future Engineers - Raspberry Pi Controller" << std::endl;
+    std::cout << "Initializing system..." << std::endl;
+    if (signal(SIGINT, signalHandler) == SIG_ERR || signal(SIGTERM, signalHandler) == SIG_ERR)
+    {
+        std::cerr << "Warning: Failed to register signal handlers." << std::endl;
+    }
+
+    // bool initSuccess = false;
+
+    try
+    {
+        initializeSystem();
+        if (!initializeModules())
+        {
+            std::cerr << "Failed to initialize one or more modules. Exiting." << std::endl;
+            return 1;
+        }
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Error during initialization: " << e.what() << std::endl;
+        return 1;
+    }
+
+    std::cout << "System initialized. Entering main loop..." << std::endl;
+
+    while (!g_shutdownRequested)
+    {
+        runMainLoop();
+        // Small sleep to prevent excessive CPU usage in the main thread loop
+        // The actual processing frequencies are controlled by the module threads
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    std::cout << "Shutting down..." << std::endl;
+    // Modules will clean up in their destructors
+    std::cout << "Shutdown complete." << std::endl;
+    return 0;
+}
+
+void initializeSystem()
+{
+    // TODO: Initialize logging, load config files if needed
+    std::cout << "System core initialized." << std::endl;
+}
+bool initializeModules()
+{
+    bool success = true;
+
+    // --- 1. Serial Handler ---
+    g_serialHandler = std::make_shared<SerialHandler>();
+    if (!g_serialHandler->openPort(config::DEFAULT_NANO_SERIAL_PORT, config::DEFAULT_NANO_BAUD_RATE))
+    {
+        std::cerr << "Failed to open serial port: " << config::DEFAULT_NANO_SERIAL_PORT << std::endl;
+        return false;
+    }
+    std::cout << "SerialHandler initialized." << std::endl;
+
+    // --- 2. Camera Interface ---
+    g_cameraInterface = std::make_shared<CameraInterface>();
+    if (!g_cameraInterface->initialize(config::DEFAULT_CAMERA_DEVICE, config::DEFAULT_CAMERA_WIDTH, config::DEFAULT_CAMERA_HEIGHT, config::DEFAULT_CAMERA_FPS))
+    {
+        std::cerr << "Failed to initialize CameraInterface." << std::endl;
+        success = false;
+    }
+    else
+    {
+        if (!g_cameraInterface->startCapture())
+        {
+            std::cerr << "Failed to start camera capture." << std::endl;
+            success = false;
+        }
+        else
+        {
+            std::cout << "CameraInterface initialized and capturing." << std::endl;
+        }
+    }
+
+    // --- 3. Image Processor ---
+    if (success)
+    {
+        g_imageProcessor = std::make_shared<ImageProcessor>();
+        // ImageProcessor depends on the CameraInterface's frame buffer
+        auto frameBuffer = g_cameraInterface->getFrameBuffer();
+        if (!g_imageProcessor->initialize(frameBuffer))
+        {
+            std::cerr << "Failed to initialize ImageProcessor." << std::endl;
+            success = false;
+        }
+        else
+        {
+            if (!g_imageProcessor->startProcessing())
+            {
+                std::cerr << "Failed to start image processing." << std::endl;
+                success = false;
+            }
+            else
+            {
+                std::cout << "ImageProcessor initialized and processing..." << std::endl;
+            }
+        }
+    }
+
+    // --- 4. Mission State & Positional Memory ---
+    g_missionState = std::make_shared<MissionState>();
+    g_positionalMemory = std::make_shared<PositionalMemory>();
+    std::cout << "MissionState and PositionalMemory initialized." << std::endl;
+
+    // --- 5. Lap Counter ---
+    g_lapCounter = std::make_shared<LapCounter>();
+    if (!g_lapCounter->initialize())
+    {
+        std::cerr << "Failed to initialize LapCounter." << std::endl;
+        success = false;
+    }
+    std::cout << "LapCounter initialized." << std::endl;
+
+    // --- 6. Path Planner ---
+    g_pathPlanner = std::make_shared<PathPlanner>();
+    // PathPlanner depends on LapCounter
+    if (!g_pathPlanner->initialize(g_lapCounter))
+    {
+        std::cerr << "Failed to initialize PathPlanner." << std::endl;
+        success = false;
+    }
+    std::cout << "PathPlanner initialized." << std::endl;
+
+    // --- 7. Vehicle Controller ---
+    g_vehicleController = std::make_shared<VehicleController>();
+    // VehicleController depends on SerialHandler
+    if (!g_vehicleController->initialize(g_serialHandler))
+    {
+        std::cerr << "Failed to initialize VehicleController." << std::endl;
+        success = false;
+    }
+    std::cout << "VehicleController initialized." << std::endl;
+
+    return success;
+}
+void shutdownModules()
+{
+    std::cout << "Shutting down modules..." << std::endl;
+
+    // --- STOP MODULES IN REVERSE ORDER OF DEPENDENCY ---
+    // Stop high-level processing first.
+
+    // 1. Stop Image Processing
+    if (g_imageProcessor)
+    {
+        std::cout << "Stopping ImageProcessor..." << std::endl;
+        g_imageProcessor->stopProcessing(); // Signal processing thread to stop
+        // stopProcessing should handle thread joining internally
+        // g_imageProcessor.reset(); // Optional: Explicitly reset if needed sooner
+    }
+
+    // 2. Stop Camera Capture
+    if (g_cameraInterface)
+    {
+        std::cout << "Stopping CameraInterface..." << std::endl;
+        g_cameraInterface->stopCapture(); // Signal capture thread to stop
+        // stopCapture should handle thread joining and rpicam-vid process termination
+        // g_cameraInterface.reset(); // Optional: Explicitly reset if needed sooner
+    }
+
+    // 3. Stop Vehicle Controller (ensure motors are off)
+    if (g_vehicleController)
+    {
+        std::cout << "Stopping VehicleController..." << std::endl;
+        g_vehicleController->emergencyStop(); // Ensure vehicle is stopped
+        // g_vehicleController.reset(); // Optional reset
+    }
+
+    // 4. Close Serial Port
+    if (g_serialHandler)
+    {
+        std::cout << "Closing SerialHandler..." << std::endl;
+        g_serialHandler->closePort(); // Close the serial connection
+        // g_serialHandler.reset(); // Optional reset
+    }
+
+    // Reset shared_ptrs to allow modules to clean up
+    // This should happen naturally as they go out of scope, but explicit reset
+    // can be useful if specific destruction order matters or to release resources immediately.
+    g_pathPlanner.reset();
+    g_lapCounter.reset();
+    g_positionalMemory.reset();
+    g_missionState.reset();
+    g_imageProcessor.reset();
+    g_cameraInterface.reset();
+    g_vehicleController.reset();
+    g_serialHandler.reset();
+
+    std::cout << "Module shutdown complete." << std::endl;
+}
+void runMainLoop()
+{
+    // This is the central orchestrator of the vehicle's actions.
+
+    // 3. Update Mission State based on serial events (like START_ACK)
+    // MOVED: Declaration and retrieval of sensor/vision data to specific handler functions.
+
+    if (g_serialHandler->hasStartAck())
+    {
+        // --- FIX: Use MissionPhase::PRE_START ---
+        if (g_missionState->getPhase() == MissionPhase::PRE_START)
+        {
+            // --- FIX: Use MissionPhase::WAITING_FOR_GO ---
+            g_missionState->setPhase(MissionPhase::WAITING_FOR_GO);
+            std::cout << "[MainLoop] Nano button press acknowledged. Waiting for GO command." << std::endl;
+            g_serialHandler->acknowledgeStartAck();
+        }
+    }
+
+    // 4. Execute logic based on the current mission phase
+    switch (g_missionState->getPhase())
+    {
+    // --- FIX: Use MissionPhase:: for all cases ---
+    case MissionPhase::PRE_START:
+        handlePreStart();
+        break;
+    case MissionPhase::WAITING_FOR_GO:
+        handleWaitingForGo();
+        break;
     case MissionPhase::DRIVING_LAPS:
-        if (missionState.isOpenChallenge())
-        {
-            return planForOpenChallenge(sensorData, visionData, missionState);
-        }
-        else if (missionState.isObstacleChallenge())
-        {
-            return planForObstacleChallenge(sensorData, visionData, missionState);
-        }
+        handleDriving(); // Data retrieval happens inside handleDriving
         break;
-
     case MissionPhase::STOPPING_AT_START:
-        return planForStopping(sensorData, visionData, missionState);
+        handleStoppingAtStart(); // Data retrieval happens inside handleStoppingAtStart
         break;
-
     case MissionPhase::FINDING_PARKING:
     case MissionPhase::PARKING:
-        if (missionState.isObstacleChallenge())
-        {
-            return planForParking(sensorData, visionData, missionState);
-        }
+        handleParking(); // Data retrieval happens inside handleParking
         break;
-
+    case MissionPhase::COMPLETED:
+        handleCompleted();
+        break;
     case MissionPhase::EMERGENCY_STOPPED:
-        return NavigationCommand(NavigationCommand::Action::EMERGENCY_STOP, 0.0f);
+        handleEmergencyStopped();
         break;
-
-    // Other phases (PRE_START, WAITING_FOR_GO, COMPLETED) should not require path planning
     default:
-        // Default action if not in a driving phase
-        return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, 0.0f);
+        std::cerr << "[MainLoop] Unknown mission phase!" << std::endl;
+        g_shutdownRequested = true;
         break;
     }
 
-    // Default fallback (should ideally not be reached in normal flow)
-    std::cerr << "PathPlanner: No specific plan for current state. Defaulting to GO_STRAIGHT." << std::endl;
-    return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, 0.5f);
+    // 5. Send periodic heartbeat to Nano (unless in a complex maneuver)
+    // This is crucial for the watchdog.
+    static int heartbeatCounter = 0;
+    heartbeatCounter++;
+    if (heartbeatCounter >= 20)
+    { // Send every ~100ms (20 * 5ms loop delay)
+        if (g_serialHandler && g_missionState->isDrivingPhase() && !g_vehicleController->isManeuverActive())
+        {
+            g_serialHandler->sendHeartbeat();
+        }
+        heartbeatCounter = 0;
+    }
+}
+
+// --- Phase Handlers ---
+
+void handlePreStart()
+{
+    // Passive state, waiting for START_ACK from Nano
+    // std::cout << "[PreStart] Waiting for Nano button press..." << std::endl;
+}
+
+void handleWaitingForGo()
+{
+    // Send GO command immediately after button ack (as per simple logic)
+    // A more advanced system might wait for sensor/vision stabilization
+    std::cout << "[WaitingForGo] Sending GO signal to Nano..." << std::endl;
+    g_serialHandler->sendGoCommand();
+
+    // Assume Open Challenge initially, or determine based on config/file
+    g_missionState->setChallengeType(ChallengeType::OPEN_CHALLENGE);
+    // --- FIX: Use MissionPhase::DRIVING_LAPS ---
+    g_missionState->setPhase(MissionPhase::DRIVING_LAPS);
+    g_missionState->setCurrentLap(0);
+
+    std::cout << "[WaitingForGo] GO signal sent. Starting mission: "
+              << (g_missionState->isOpenChallenge() ? "Open Challenge" : "Obstacle Challenge") << std::endl;
+}
+
+void handleDriving()
+{
+    static bool initialDataStored = false;
+
+    // --- MOVE THE DECLARATIONS AND RETRIEVAL HERE ---
+    // 1. Get latest sensor data from Nano
+    SensorData latestSensorData;
+    bool newSensorData = g_serialHandler->getLatestSensorData(latestSensorData);
+
+    // 2. Get latest vision snapshot from ImageProcessor
+    VisionSnapshot latestVisionData;
+    bool newVisionData = g_imageProcessor->getLatestSnapshot(latestVisionData);
+
+    // --- USE THE VARIABLES HERE ---
+    if (newSensorData && newVisionData)
+    {
+        // --- 1. Update Lap Counter ---
+        g_lapCounter->update(latestSensorData, latestVisionData);
+
+        // --- 2. Determine if in Start Section ---
+        g_missionState->setInStartSection(g_lapCounter->isInStartSection());
+
+        // --- 3. Store Initial Position (Once, after stable start) ---
+        if (!initialDataStored && g_missionState->getCurrentLap() >= 0)
+        {
+            g_positionalMemory->storeInitialPosition(latestSensorData, latestVisionData);
+            g_positionalMemory->storePreStopPosition(latestSensorData, latestVisionData);
+            initialDataStored = true;
+            std::cout << "[Driving] Initial positional data stored." << std::endl;
+        }
+
+        // --- 4. Check for Lap Completion and Transition ---
+        if (g_lapCounter->isLapCompleted())
+        {
+            int lapJustCompleted = g_lapCounter->getCurrentLap();
+            std::cout << "[Driving] Lap " << lapJustCompleted << " completed." << std::endl;
+            g_lapCounter->acknowledgeLapCompletion();
+
+            if (lapJustCompleted >= 3)
+            {
+                if (g_missionState->isOpenChallenge())
+                {
+                    // --- FIX: Use MissionPhase::STOPPING_AT_START ---
+                    g_missionState->setPhase(MissionPhase::STOPPING_AT_START);
+                    std::cout << "[Driving] All laps completed (Open). Transitioning to STOPPING_AT_START." << std::endl;
+                }
+                else if (g_missionState->isObstacleChallenge())
+                {
+                    // --- FIX: Use MissionPhase::FINDING_PARKING ---
+                    g_missionState->setPhase(MissionPhase::FINDING_PARKING);
+                    std::cout << "[Driving] All laps completed (Obstacle). Transitioning to FINDING_PARKING." << std::endl;
+                }
+            }
+        }
+
+        // --- 5. Plan Path and Execute ---
+        NavigationCommand navCommand = g_pathPlanner->plan(latestSensorData, latestVisionData, *g_missionState);
+        g_vehicleController->executeCommand(navCommand);
+    }
+    // --- END OF SCOPE FOR VARIABLES ---
+}
+
+void handleStoppingAtStart()
+{
+    // This phase is for stopping in the start section after 3 laps in Open Challenge
+    // or after parking in Obstacle Challenge.
+
+    static bool stopCommandSent = false;
+    static bool finalStopConfirmed = false;
+
+    // --- MOVE THE DECLARATIONS AND RETRIEVAL HERE ---
+    // Get latest data
+    SensorData latestSensorData;
+    bool newSensorData = g_serialHandler->getLatestSensorData(latestSensorData);
+
+    VisionSnapshot latestVisionData;
+    bool newVisionData = g_imageProcessor->getLatestSnapshot(latestVisionData);
+
+    // --- USE THE VARIABLES HERE ---
+    if (newSensorData && newVisionData)
+    {
+        // --- 1. Check if we are back at the initial position ---
+        bool isAtInitial = g_positionalMemory->isLikelyAtPreStopPosition(latestSensorData, latestVisionData, 0.92f);
+
+        if (!stopCommandSent)
+        {
+            // --- 2. Send initial stop command ---
+            std::cout << "[StoppingAtStart] Initiating stop sequence." << std::endl;
+            NavigationCommand stopCmd(NavigationCommand::Action::STOP_IN_START, 0.0f);
+            g_vehicleController->executeCommand(stopCmd);
+            stopCommandSent = true;
+        }
+
+        // --- 3. Fine-tune stopping based on position ---
+        if (isAtInitial && !finalStopConfirmed)
+        {
+            std::cout << "[StoppingAtStart] Confidently at start position. Finalizing stop." << std::endl;
+            NavigationCommand finalStopCmd(NavigationCommand::Action::STOP_IN_START, 0.0f);
+            g_vehicleController->executeCommand(finalStopCmd);
+            finalStopConfirmed = true;
+            // Small delay to ensure vehicle comes to a complete halt before declaring completion
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            // --- FIX: Use MissionPhase::COMPLETED ---
+            g_missionState->setPhase(MissionPhase::COMPLETED);
+            std::cout << "[StoppingAtStart] Vehicle stopped in start section. Mission COMPLETED." << std::endl;
+        }
+        else if (!isAtInitial && stopCommandSent)
+        {
+            // If we sent stop but are not there, we might have overshot or need adjustment
+            // A more advanced system would implement a PID controller here using positional error
+            // For now, we rely on the initial stop command and the high threshold for confirmation.
+            // std::cout << "[StoppingAtStart] Not yet at start position, waiting for confirmation." << std::endl;
+        }
+    }
+    // --- END OF SCOPE FOR VARIABLES ---
+}
+
+void handleParking()
+{
+    // In Obstacle Challenge, after 3 laps, find and execute parking.
+
+    static bool parkingInitiated = false;
+
+    // --- MOVE THE DECLARATIONS AND RETRIEVAL HERE ---
+    // Get latest data
+    SensorData latestSensorData;
+    bool newSensorData = g_serialHandler->getLatestSensorData(latestSensorData);
+
+    VisionSnapshot latestVisionData;
+    bool newVisionData = g_imageProcessor->getLatestSnapshot(latestVisionData);
+
+    // --- USE THE VARIABLES HERE ---
+    if (newSensorData && newVisionData)
+    {
+        // --- FIX: Use MissionPhase::FINDING_PARKING ---
+        if (!parkingInitiated && g_missionState->getPhase() == MissionPhase::FINDING_PARKING)
+        {
+            if (g_missionState->isInStartSection())
+            {
+                std::cout << "[Parking] In start section after 3 laps. Initiating parking sequence." << std::endl;
+                NavigationCommand parkCmd(NavigationCommand::Action::EXECUTE_PARKING, 0.0f);
+                g_vehicleController->executeCommand(parkCmd);
+                parkingInitiated = true;
+                // --- FIX: Use MissionPhase::PARKING ---
+                g_missionState->setPhase(MissionPhase::PARKING);
+            }
+        }
+
+        // --- 2. Monitor parking progress ---
+        if (parkingInitiated && !g_vehicleController->isManeuverActive())
+        {
+            std::cout << "[Parking] Parking sequence finished." << std::endl;
+            // --- FIX: Use MissionPhase::COMPLETED ---
+            g_missionState->setPhase(MissionPhase::COMPLETED);
+            std::cout << "[Parking] Vehicle parked. Mission COMPLETED." << std::endl;
+        }
+
+        // --- 3. While finding parking or parking is active, let PathPlanner guide ---
+        if (!parkingInitiated || g_vehicleController->isManeuverActive())
+        {
+            // --- FIX: Use MissionPhase::FINDING_PARKING ---
+            if (g_missionState->getPhase() == MissionPhase::FINDING_PARKING)
+            {
+                NavigationCommand navCommand = g_pathPlanner->plan(latestSensorData, latestVisionData, *g_missionState);
+                if (!g_vehicleController->isManeuverActive())
+                {
+                    g_vehicleController->executeCommand(navCommand);
+                }
+            }
+        }
+    }
+    // --- END OF SCOPE FOR VARIABLES ---
+}
+
+void handleCompleted()
+{
+    std::cout << "[Completed] Mission successfully finished!" << std::endl;
+    g_shutdownRequested = true;
+}
+
+void handleEmergencyStopped()
+{
+    std::cout << "[EmergencyStopped] Vehicle has been emergency stopped." << std::endl;
+    // Ensure vehicle is stopped via VehicleController
+    if (g_vehicleController)
+    {
+        g_vehicleController->emergencyStop();
+    }
+    g_shutdownRequested = true; // Or wait for reset
+}cat: src/navigation: Is a directory
+cat: src/sensors: Is a directory
+cat: src/utils: Is a directory
+cat: src/vision: Is a directory
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle$ 
+
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle$ cat src/*/*
+// actuators/vehicle_controller.cpp
+// Implementation of VehicleController
+
+#include "vehicle_controller.h"
+#include <iostream>
+#include <cmath>  // For round, clamp functions if needed
+#include <thread> // For potential small delays if needed
+#include <chrono> // For potential small delays if needed
+
+VehicleController::VehicleController()
+    : parkingActive(false), maneuverInProgress(false), parkingState(ParkingState::NOT_PARKING), parkingStepCounter(0)
+{
+    // Constructor initializes atomic flags and member variables
+}
+
+bool VehicleController::initialize(std::shared_ptr<SerialHandler> serialHandler)
+{
+    if (!serialHandler)
+    {
+        std::cerr << "VehicleController: Invalid SerialHandler provided." << std::endl;
+        return false;
+    }
+    this->serialHandler = serialHandler;
+    std::cout << "VehicleController: Initialized with SerialHandler." << std::endl;
+    return true;
+}
+
+void VehicleController::executeCommand(const NavigationCommand &command)
+{
+    // If a complex maneuver like parking is active, prioritize its internal logic
+    // unless it's an emergency stop.
+    if (isManeuverActive() && command.action != NavigationCommand::Action::EMERGENCY_STOP)
+    {
+        if (parkingActive)
+        {
+            updateParkingSequence(); // Continue parking logic
+        }
+        // Ignore other commands while a maneuver is active
+        return;
+    }
+
+    // Handle the command based on its action
+    switch (command.action)
+    {
+    case NavigationCommand::Action::FOLLOW_LEFT_LANE:
+        handleFollowLeftLane(command.desiredSpeed);
+        break;
+    case NavigationCommand::Action::FOLLOW_RIGHT_LANE:
+        handleFollowRightLane(command.desiredSpeed);
+        break;
+    case NavigationCommand::Action::GO_STRAIGHT:
+        handleGoStraight(command.desiredSpeed);
+        break;
+    case NavigationCommand::Action::STOP_IN_START:
+        handleStopInStart();
+        break;
+    case NavigationCommand::Action::EXECUTE_PARKING:
+        handleExecuteParking(); // This starts the parking sequence
+        break;
+    case NavigationCommand::Action::EMERGENCY_STOP:
+        handleEmergencyStop();
+        break;
+    default:
+        // Unknown action, treat as stop or go straight with zero speed?
+        std::cerr << "VehicleController: Unknown NavigationCommand action." << std::endl;
+        sendMotorCommand(0.0f);
+        sendServoCommand(0.0f); // Center steering
+        break;
+    }
+}
+
+void VehicleController::startParkingSequence()
+{
+    if (isManeuverActive())
+    {
+        std::cerr << "VehicleController: Cannot start parking, another maneuver is active." << std::endl;
+        return;
+    }
+    parkingActive.store(true);
+    maneuverInProgress.store(true);
+    parkingState.store(ParkingState::APPROACHING_SPOT);
+    parkingStepCounter = 0;
+    std::cout << "VehicleController: Starting parking sequence." << std::endl;
+}
+
+void VehicleController::updateParkingSequence()
+{
+    if (!parkingActive)
+        return;
+
+    // Simple state machine for parking
+    // In a real implementation, this would be much more sophisticated,
+    // using encoders, IMU, or precise timing/distance estimates.
+    // This is a basic placeholder sequence.
+
+    // Increment step counter (this would ideally be based on time or distance)
+    parkingStepCounter++;
+
+    switch (parkingState.load())
+    {
+    case ParkingState::APPROACHING_SPOT:
+        // 1. Approach the spot slowly, aligning the rear axle with the spot start
+        sendMotorCommand(0.3f); // Slow forward
+        sendServoCommand(0.0f); // Straight
+        if (parkingStepCounter > 50)
+        { // Placeholder condition
+            parkingState.store(ParkingState::REVERSING_IN);
+            parkingStepCounter = 0;
+            std::cout << "VehicleController: Parking - Reversing into spot." << std::endl;
+        }
+        break;
+
+    case ParkingState::REVERSING_IN:
+        // 2. Start reversing, turn wheels hard right (or left, depending on side)
+        sendMotorCommand(-0.4f); // Slow reverse
+        sendServoCommand(1.0f);  // Hard right turn (assuming 1.0 is right)
+        if (parkingStepCounter > 100)
+        { // Placeholder condition
+            parkingState.store(ParkingState::TURNING_IN);
+            parkingStepCounter = 0;
+            std::cout << "VehicleController: Parking - Turning wheels in." << std::endl;
+        }
+        break;
+
+    case ParkingState::TURNING_IN:
+        // 3. Turn wheels hard left (or right) to align inside the spot
+        sendMotorCommand(-0.3f); // Continue slow reverse
+        sendServoCommand(-1.0f); // Hard left turn
+        if (parkingStepCounter > 50)
+        { // Placeholder condition
+            parkingState.store(ParkingState::REVERSING_IN_FINAL);
+            parkingStepCounter = 0;
+            std::cout << "VehicleController: Parking - Final reverse." << std::endl;
+        }
+        break;
+
+    case ParkingState::REVERSING_IN_FINAL:
+        // 4. Continue reversing to pull fully into the spot
+        sendMotorCommand(-0.3f); // Slow reverse
+        sendServoCommand(-1.0f); // Keep left turn
+        if (parkingStepCounter > 80)
+        { // Placeholder condition
+            parkingState.store(ParkingState::TURNING_STRAIGHT);
+            parkingStepCounter = 0;
+            std::cout << "VehicleController: Parking - Straightening wheels." << std::endl;
+        }
+        break;
+
+    case ParkingState::TURNING_STRAIGHT:
+        // 5. Straighten the wheels
+        sendMotorCommand(0.0f); // Stop
+        sendServoCommand(0.0f); // Center steering
+        // Small delay to let steering settle?
+        if (parkingStepCounter > 20)
+        { // Placeholder condition
+            parkingState.store(ParkingState::PARKING_COMPLETE);
+            parkingStepCounter = 0;
+            std::cout << "VehicleController: Parking - Sequence complete." << std::endl;
+        }
+        break;
+
+    case ParkingState::PARKING_COMPLETE:
+        // Parking finished successfully
+        parkingActive.store(false);
+        maneuverInProgress.store(false);
+        parkingStepCounter = 0;
+        // Ensure stopped
+        sendMotorCommand(0.0f);
+        sendServoCommand(0.0f);
+        std::cout << "VehicleController: Parking completed successfully." << std::endl;
+        break;
+
+    case ParkingState::PARKING_FAILED:
+        // Parking failed, stop and exit sequence
+        parkingActive.store(false);
+        maneuverInProgress.store(false);
+        parkingStepCounter = 0;
+        sendMotorCommand(0.0f);
+        sendServoCommand(0.0f);
+        std::cout << "VehicleController: Parking failed." << std::endl;
+        break;
+
+    default:
+        // Should not happen
+        parkingActive.store(false);
+        maneuverInProgress.store(false);
+        sendMotorCommand(0.0f);
+        sendServoCommand(0.0f);
+        std::cerr << "VehicleController: Unexpected parking state." << std::endl;
+        break;
+    }
+}
+
+bool VehicleController::isManeuverActive() const
+{
+    return maneuverInProgress.load();
+}
+
+void VehicleController::emergencyStop()
+{
+    sendMotorCommand(0.0f);
+    sendServoCommand(0.0f);
+    // Cancel any active maneuvers
+    parkingActive.store(false);
+    maneuverInProgress.store(false);
+    parkingState.store(ParkingState::NOT_PARKING);
+    parkingStepCounter = 0;
+    std::cout << "VehicleController: Emergency stop executed." << std::endl;
 }
 
 // --- Private Helper Functions ---
 
-NavigationCommand PathPlanner::planForOpenChallenge(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
+void VehicleController::sendMotorCommand(float normalizedSpeed)
 {
-    (void)visionData;
-    (void)missionState;
-    // In Open Challenge, there are no signs. Strategy is usually wall following.
-    // Common strategies: Left Wall Following, Right Wall Following.
-    // For simplicity, let's assume a basic left wall following strategy.
+    // Clamp speed to valid range
+    if (normalizedSpeed > 1.0f)
+        normalizedSpeed = 1.0f;
+    if (normalizedSpeed < -1.0f)
+        normalizedSpeed = -1.0f;
 
-    // Basic obstacle avoidance check
-    float turnDirection = 0.0f;
-    if (needsObstacleAvoidance(sensorData, turnDirection))
+    // Map normalized speed (-1.0 to 1.0) to Nano's motor command range (-128 to 127)
+    int8_t nanoSpeed = static_cast<int8_t>(std::round(normalizedSpeed * 127.0f));
+    if (serialHandler)
     {
-        float speed = 0.4f; // Slow down for obstacle
-        if (turnDirection < 0)
-        {
-            // Turn left
-            return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, speed); // Assume steering is handled by lower level
-        }
-        else if (turnDirection > 0)
-        {
-            // Turn right
-            return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, speed);
-        }
-        else
-        {
-            // Stop or back up?
-            return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, 0.0f);
-        }
-    }
-
-    // Default left wall following logic (simplified)
-    // Aim to maintain a certain distance from the left wall
-    int16_t leftDistance = sensorData.leftDistance;
-    int16_t frontDistanceVar = sensorData.frontDistance;
-    (void)frontDistanceVar;    // Unused for now
-    float desiredSpeed = 0.6f; // Medium speed
-    // Action is implicit in speed/steering calculation in this simplified view
-    // A more complex planner might explicitly set FOLLOW_LEFT_LANE
-
-    // Simple proportional controller for steering based on left distance
-    // Target distance from left wall (mm)
-    const float TARGET_LEFT_DISTANCE = 200.0f;
-    const float MAX_STEERING_ADJUSTMENT = 20.0f; // Degrees
-
-    float distanceError = static_cast<float>(leftDistance) - TARGET_LEFT_DISTANCE;
-    // Clamp error to prevent overreaction
-    distanceError = std::max(-300.0f, std::min(300.0f, distanceError));
-
-    // This logic would typically result in a servo angle command in the VehicleController
-    // For example: base_angle + Kp * error
-    // If error is positive (too far from wall), turn left (decrease servo angle)
-    // If error is negative (too close to wall), turn right (increase servo angle)
-
-    // For now, we just return a command indicating intent and speed
-    // The actual steering calculation happens in VehicleController/Actuators
-    return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, desiredSpeed);
-}
-
-NavigationCommand PathPlanner::planForObstacleChallenge(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
-{
-    // In Obstacle Challenge, follow traffic signs.
-    // Green sign means follow left lane.
-    // Red sign means follow right lane.
-
-    // Basic obstacle avoidance check (takes precedence)
-    float turnDirection = 0.0f;
-    if (needsObstacleAvoidance(sensorData, turnDirection))
-    {
-        float speed = 0.4f;
-        return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, speed);
-    }
-
-    // Determine lane to follow based on sign detection
-    // This assumes VisionSnapshot has been processed to detect signs
-    bool followLeft = false;
-    bool followRight = false;
-
-    // Simplified logic: if both signs detected, prioritize based on last known rule or proximity
-    // If only one sign, follow that rule.
-    // If no signs, default to a safe strategy (e.g., center, or last known rule)
-
-    if (visionData.signLeftDetected && visionData.signRightDetected)
-    {
-        // Conflict resolution needed. Simple approach: follow the closer one.
-        // Assuming centroid X coordinates are available in VisionSnapshot
-        // (This requires updating VisionSnapshot struct and image_processor)
-        // For now, let's assume a simple flag or last known state is used.
-        // Placeholder logic:
-        followLeft = true; // Default to left if conflict, or use more sophisticated logic
-        // std::cout << "PathPlanner: Conflict - Both signs detected. Following default (Left)." << std::endl;
-    }
-    else if (visionData.signLeftDetected)
-    {
-        followLeft = true;
-        // std::cout << "PathPlanner: Green sign detected. Following left lane." << std::endl;
-    }
-    else if (visionData.signRightDetected)
-    {
-        followRight = true;
-        // std::cout << "PathPlanner: Red sign detected. Following right lane." << std::endl;
-    }
-    else
-    {
-        // No signs detected. Continue with last known strategy or default.
-        // This is a common scenario between signs.
-        // std::cout << "PathPlanner: No signs detected. Continuing last strategy or default." << std::endl;
-        // For now, we'll assume a default action like GO_STRAIGHT
-        // A more robust system might remember the last sign or use path prediction.
-    }
-
-    float desiredSpeed = 0.6f; // Medium speed
-
-    if (followLeft)
-    {
-        return NavigationCommand(NavigationCommand::Action::FOLLOW_LEFT_LANE, desiredSpeed);
-    }
-    else if (followRight)
-    {
-        return NavigationCommand(NavigationCommand::Action::FOLLOW_RIGHT_LANE, desiredSpeed);
-    }
-    else
-    {
-        // No specific lane command, go straight
-        return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, desiredSpeed);
+        serialHandler->sendMotorSpeedCommand(nanoSpeed);
     }
 }
 
-NavigationCommand PathPlanner::planForStopping(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
+void VehicleController::sendServoCommand(float normalizedSteering)
 {
-    // This phase is for stopping in the start section after 3 laps.
-    // The main logic for *when* to stop should be in main.cpp using PositionalMemory.
-    // The PathPlanner's role here might be to refine the approach or execute the final stop.
+    // Clamp steering to valid range
+    if (normalizedSteering > 1.0f)
+        normalizedSteering = 1.0f;
+    if (normalizedSteering < -1.0f)
+        normalizedSteering = -1.0f;
 
-    // Indicate to the control system that stopping is the goal.
-    // The actual stopping maneuver (speed=0, precise positioning) is handled by VehicleController
-    // based on this command and potentially further input from PositionalMemory/Vision.
+    // Map normalized steering (-1.0 to 1.0) to servo angle (0 to 180)
+    // Assuming -1.0 = 45 degrees (hard left), 0.0 = 90 degrees (center), 1.0 = 135 degrees (hard right)
+    // This mapping can be adjusted based on vehicle characteristics
+    uint8_t servoAngle = static_cast<uint8_t>(std::round(90.0f + normalizedSteering * 45.0f));
+    // Ensure angle is within 0-180
+    if (servoAngle > 180)
+        servoAngle = 180;
+    // if (servoAngle < 0)
+    //     servoAngle = 0;
 
-    // For now, simply command a stop.
-    // A more advanced version might include a "slow_approach" action.
-    std::cout << "PathPlanner: Planning for STOP in start section." << std::endl;
-    return NavigationCommand(NavigationCommand::Action::STOP_IN_START, 0.0f);
-}
-
-NavigationCommand PathPlanner::planForParking(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
-{
-    // Handle parking phases
-    if (missionState.getPhase() == MissionPhase::FINDING_PARKING)
+    if (serialHandler)
     {
-        // Logic to search for the parking lot entrance.
-        // This could involve:
-        // - Looking for a specific gap in the outer wall (using vision/US)
-        // - Following the outer wall until the gap is found
-        // - Entering a state where the vehicle is aligned with the gap
-
-        // Simplified placeholder: Assume we are looking for a large opening on the right
-        // indicated by a sudden increase in right sensor distance.
-        // A real implementation would be more robust.
-        if (sensorData.rightDistance > 400)
-        { // Example threshold for gap
-            std::cout << "PathPlanner: Parking entrance potentially found (large right distance)." << std::endl;
-            // This would likely trigger a state change in MissionState to PARKING
-            // and a specific parking maneuver command.
-            // For now, we can signal readiness.
-            return NavigationCommand(NavigationCommand::Action::EXECUTE_PARKING, 0.3f); // Slow approach speed
-        }
-        else
-        {
-            // Continue searching, e.g., follow outer wall
-            return NavigationCommand(NavigationCommand::Action::FOLLOW_RIGHT_LANE, 0.5f);
-        }
+        serialHandler->sendServoAngleCommand(servoAngle);
     }
-    else if (missionState.getPhase() == MissionPhase::PARKING)
-    {
-        // Execute the specific parallel parking maneuver.
-        // This is a complex sequence of movements.
-        // The command here signals that the complex maneuver should be executed.
-        // The actual sequence of motor/servo commands would be handled by a dedicated
-        // ParkingAssistant module or state machine within VehicleController.
-        std::cout << "PathPlanner: Executing PARKING maneuver." << std::endl;
-        return NavigationCommand(NavigationCommand::Action::EXECUTE_PARKING, 0.0f); // Speed controlled internally by parking sequence
-    }
-
-    // Default fallback for parking phases
-    return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, 0.0f);
 }
 
-bool PathPlanner::needsObstacleAvoidance(const SensorData &sensorData, float &turnDirection)
+// --- Action Handlers ---
+
+void VehicleController::handleFollowLeftLane(float desiredSpeed)
 {
-    turnDirection = 0.0f; // Default: no turn needed
-
-    // Check front sensor for immediate obstacles
-    if (sensorData.frontDistance < 150)
-    { // e.g., 15cm
-        // Obstacle ahead, need to decide turn direction
-        // Use left/right sensors to decide
-        if (sensorData.leftDistance > sensorData.rightDistance)
-        {
-            turnDirection = -1.0f; // Turn left
-        }
-        else
-        {
-            turnDirection = 1.0f; // Turn right
-        }
-        return true;
-    }
-
-    // Optional: Check side sensors for very close walls that might require correction
-    // This is more for fine-tuning path than major avoidance.
-    // Example:
-    // if (sensorData.leftDistance < 50) { turnDirection = 1.0f; return true; }
-    // if (sensorData.rightDistance < 50) { turnDirection = -1.0f; return true; }
-
-    return false; // No immediate obstacle avoidance needed
+    // This is a simplified interpretation.
+    // A more advanced system might use a PID controller based on sensor/edge data.
+    // For now, assume a basic steering command to follow the left.
+    sendMotorCommand(desiredSpeed);
+    sendServoCommand(-0.3f); // Slight left turn command
 }
 
-// serial_handler.h
-// Manages serial communication with the Arduino Nano
+void VehicleController::handleFollowRightLane(float desiredSpeed)
+{
+    sendMotorCommand(desiredSpeed);
+    sendServoCommand(0.3f); // Slight right turn command
+}
 
-#ifndef SERIAL_HANDLER_H
-#define SERIAL_HANDLER_H
+void VehicleController::handleGoStraight(float desiredSpeed)
+{
+    sendMotorCommand(desiredSpeed);
+    sendServoCommand(0.0f); // Center steering
+}
 
-#include <string>
-#include <cstdint>
+void VehicleController::handleStopInStart()
+{
+    // Command to stop the vehicle
+    sendMotorCommand(0.0f);
+    sendServoCommand(0.0f);
+    // The logic for *when* to call this and ensuring it stops in the correct place
+    // should primarily reside in main.cpp using PositionalMemory.
+    std::cout << "VehicleController: Executing STOP command." << std::endl;
+}
+
+void VehicleController::handleExecuteParking()
+{
+    // This command initiates the parking sequence
+    startParkingSequence();
+}
+
+void VehicleController::handleEmergencyStop()
+{
+    emergencyStop();
+}// actuators/vehicle_controller.h
+// Translates high-level navigation commands into low-level actuator commands
+
+#ifndef VEHICLE_CONTROLLER_H
+#define VEHICLE_CONTROLLER_H
+
+#include <memory>
 #include <atomic>
-#include <thread>
-#include <mutex>
-#include <queue>
-// Include the sensor data struct that matches Nano's CompactSensorData
-#include "../sensors/sensor_data.h"
+// Assuming NavigationCommand is defined in path_planner.h
+#include "../control/path_planner.h"
+// Assuming SerialHandler is defined in communication/serial_handler.h
+#include "../communication/serial_handler.h"
 
-// Forward declarations for packet structures if needed, or include serial_protocol.h
-// #include "serial_protocol.h"
-
-class SerialHandler
+class VehicleController
 {
 public:
-    SerialHandler();
-    ~SerialHandler();
+    VehicleController();
+    ~VehicleController() = default;
 
-    // Open and close the serial port
-    bool openPort(const std::string &port, uint32_t baudRate);
-    void closePort();
+    // Initialize with the SerialHandler for sending commands
+    bool initialize(std::shared_ptr<SerialHandler> serialHandler);
 
-    // --- Sending Commands TO Nano ---
-    bool sendMotorSpeedCommand(int8_t speed);  // -128 to 127
-    bool sendServoAngleCommand(uint8_t angle); // 0 to 180
-    bool sendHeartbeat();
-    bool sendGoCommand();     // Pi's "GO" signal
-    bool sendEmergencyStop(); // Just in case Pi needs to E-Stop
+    // Execute a navigation command
+    // This should be called regularly in the main loop with the latest command from PathPlanner
+    void executeCommand(const NavigationCommand &command);
 
-    // --- Receiving Data FROM Nano ---
-    // Get the latest sensor data received
-    bool getLatestSensorData(SensorData &data);
+    // Start the parallel parking sequence
+    // This will take over control until parking is complete or fails
+    void startParkingSequence();
 
-    // Check for specific packets
-    bool hasStartAck() const;
-    void acknowledgeStartAck(); // Clear the start ack flag
+    // Check if a complex maneuver (like parking) is currently active
+    bool isManeuverActive() const;
 
-    // Thread-safe method to process incoming data (called by receive thread)
-    void processData(const uint8_t *buffer, size_t length);
+    // Emergency stop - immediately sends stop command
+    void emergencyStop();
 
 private:
-    std::string portName;
-    int serialFd; // File descriptor for the serial port
-    std::atomic<bool> isOpen;
+    std::shared_ptr<SerialHandler> serialHandler;
+    std::atomic<bool> parkingActive;
+    std::atomic<bool> maneuverInProgress; // General flag for any complex maneuver
 
-    // Receiving thread
-    std::thread receiveThread;
-    std::atomic<bool> stopReceiving;
-
-    // Data buffering and synchronization
-    mutable std::mutex dataMutex;
-    SensorData latestSensorData;
-    std::atomic<bool> sensorDataUpdated;
-
-    size_t rxBufferIndex;
-    std::atomic<bool> startAckReceived;
-
-    // Buffer for incoming raw bytes
-    static const size_t RX_BUFFER_SIZE = 256;
-    uint8_t rxBuffer[RX_BUFFER_SIZE];
-
-    // Packet parsing state
-    enum class ParseState
+    // State for parking sequence
+    enum class ParkingState
     {
-        IDLE,
-        START_RECEIVED,
-        COMMAND_RECEIVED,
-        LENGTH_RECEIVED,
-        DATA_RECEIVED,
-        CHECKSUM_RECEIVED
+        NOT_PARKING,
+        APPROACHING_SPOT,   // Initial approach to align with parking spot
+        REVERSING_IN,       // First reverse maneuver
+        TURNING_IN,         // Turn wheels to align inside
+        REVERSING_IN_FINAL, // Final reverse to position fully
+        TURNING_STRAIGHT,   // Straighten wheels
+        PARKING_COMPLETE,
+        PARKING_FAILED
     };
-    ParseState currentState;
+    std::atomic<ParkingState> parkingState;
+    int parkingStepCounter; // Simple step counter for timing/state progression
 
-    // --- Private Helper Functions ---
-    void receiveLoop();                                  // Function run by the receive thread
-    void resetParser();                                  // Reset packet parser state
-    bool writeBytes(const uint8_t *data, size_t length); // Send raw bytes
+    // Helper functions for specific actions
+    void sendMotorCommand(float normalizedSpeed);    // -1.0 to 1.0
+    void sendServoCommand(float normalizedSteering); // -1.0 (full left) to 1.0 (full right), 0.0 (center)
 
-    // Packet creation helpers (mirror Nano's protocol)
-    void createAndSendPacket(uint8_t command, uint8_t length, const uint8_t *data);
-    uint8_t calculateChecksum(const uint8_t *data, size_t length);
+    // Parking sequence logic
+    void updateParkingSequence();
+
+    // Map high-level actions to low-level commands
+    void handleFollowLeftLane(float desiredSpeed);
+    void handleFollowRightLane(float desiredSpeed);
+    void handleGoStraight(float desiredSpeed);
+    void handleStopInStart();
+    void handleExecuteParking(); // Triggers parking sequence
+    void handleEmergencyStop();
 };
 
-#endif // SERIAL_HANDLER_H
-
-// serial_handler.cpp
+#endif // VEHICLE_CONTROLLER_H// serial_handler.cpp
 // Implementation of SerialHandler
 
 #include "serial_handler.h"
@@ -536,7 +2523,7 @@ private:
 #endif
 
 SerialHandler::SerialHandler()
-    : serialFd(-1), isOpen(false), stopReceiving(false), rxBufferIndex(0), startAckReceived(false), currentState(ParseState::IDLE), sensorDataUpdated(false)
+    : serialFd(-1), isOpen(false), stopReceiving(false), sensorDataUpdated(false), rxBufferIndex(0), startAckReceived(false), currentState(ParseState::IDLE)
 {
     resetParser();
     // Initialize latestSensorData to zero or default values if needed
@@ -885,67 +2872,2332 @@ uint8_t SerialHandler::calculateChecksum(const uint8_t *data, size_t length)
         checksum ^= data[i];
     }
     return checksum;
+}// serial_handler.h
+// Manages serial communication with the Arduino Nano
+
+#ifndef SERIAL_HANDLER_H
+#define SERIAL_HANDLER_H
+
+#include <string>
+#include <cstdint>
+#include <atomic>
+#include <thread>
+#include <mutex>
+#include <queue>
+// Include the sensor data struct that matches Nano's CompactSensorData
+#include "../sensors/sensor_data.h"
+
+// Forward declarations for packet structures if needed, or include serial_protocol.h
+// #include "serial_protocol.h"
+
+class SerialHandler
+{
+public:
+    SerialHandler();
+    ~SerialHandler();
+
+    // Open and close the serial port
+    bool openPort(const std::string &port, uint32_t baudRate);
+    void closePort();
+
+    // --- Sending Commands TO Nano ---
+    bool sendMotorSpeedCommand(int8_t speed);  // -128 to 127
+    bool sendServoAngleCommand(uint8_t angle); // 0 to 180
+    bool sendHeartbeat();
+    bool sendGoCommand();     // Pi's "GO" signal
+    bool sendEmergencyStop(); // Just in case Pi needs to E-Stop
+
+    // --- Receiving Data FROM Nano ---
+    // Get the latest sensor data received
+    bool getLatestSensorData(SensorData &data);
+
+    // Check for specific packets
+    bool hasStartAck() const;
+    void acknowledgeStartAck(); // Clear the start ack flag
+
+    // Thread-safe method to process incoming data (called by receive thread)
+    void processData(const uint8_t *buffer, size_t length);
+
+private:
+    std::string portName;
+    int serialFd; // File descriptor for the serial port
+    std::atomic<bool> isOpen;
+
+    // Receiving thread
+    std::thread receiveThread;
+    std::atomic<bool> stopReceiving;
+
+    // Data buffering and synchronization
+    mutable std::mutex dataMutex;
+    SensorData latestSensorData;
+    std::atomic<bool> sensorDataUpdated;
+
+    size_t rxBufferIndex;
+    std::atomic<bool> startAckReceived;
+
+    // Buffer for incoming raw bytes
+    static const size_t RX_BUFFER_SIZE = 256;
+    uint8_t rxBuffer[RX_BUFFER_SIZE];
+
+    // Packet parsing state
+    enum class ParseState
+    {
+        IDLE,
+        START_RECEIVED,
+        COMMAND_RECEIVED,
+        LENGTH_RECEIVED,
+        DATA_RECEIVED,
+        CHECKSUM_RECEIVED
+    };
+    ParseState currentState;
+
+    // --- Private Helper Functions ---
+    void receiveLoop();                                  // Function run by the receive thread
+    void resetParser();                                  // Reset packet parser state
+    bool writeBytes(const uint8_t *data, size_t length); // Send raw bytes
+
+    // Packet creation helpers (mirror Nano's protocol)
+    void createAndSendPacket(uint8_t command, uint8_t length, const uint8_t *data);
+    uint8_t calculateChecksum(const uint8_t *data, size_t length);
+};
+
+#endif // SERIAL_HANDLER_H// config/vehicle_config.cpp
+// Definitions for vehicle configuration constants
+
+#include "vehicle_config.h"
+
+namespace config
+{
+
+    // --- Serial Communication ---
+    const std::string DEFAULT_NANO_SERIAL_PORT = "/dev/serial0"; // Common default, change as needed
+    const uint32_t DEFAULT_NANO_BAUD_RATE = 115200;
+
+    // --- Camera ---
+    // const std::string DEFAULT_CAMERA_DEVICE = "/dev/video0";
+    const std::string DEFAULT_CAMERA_DEVICE = ""; // Let rpicam-vid find it, or use "/base/soc/i2c0mux/i2c@1/ov5647@36"
+    const int DEFAULT_CAMERA_WIDTH = 640;
+    const int DEFAULT_CAMERA_HEIGHT = 480;
+    const int DEFAULT_CAMERA_FPS = 20; // Adjust based on processing capability
+
+    // --- Vehicle Physical Parameters ---
+    const float VEHICLE_WIDTH_MM = 200.0f;  // From rules
+    const float VEHICLE_LENGTH_MM = 300.0f; // From rules
+    const float WHEELBASE_MM = 200.0f;      // Example, adjust based on actual build
+
+    // --- Mission Parameters ---
+    const float POSITIONAL_SIMILARITY_THRESHOLD_INITIAL = 0.85f;  // 85% similarity to consider "at initial position"
+    const float POSITIONAL_SIMILARITY_THRESHOLD_PRE_STOP = 0.95f; // 95% similarity for pre-stop position
+    const float MIN_DISTANCE_TO_COUNT_LAP_MM = 200.0f;            // Example threshold
+
+} // namespace config// config/vehicle_config.h
+// Central configuration file for vehicle parameters
+
+#ifndef VEHICLE_CONFIG_H
+#define VEHICLE_CONFIG_H
+
+#include <string>
+#include <cstdint>
+
+namespace config
+{
+
+    // --- Serial Communication ---
+    // Default serial port for communication with Nano
+    // This can be overridden at runtime or via command line arguments
+    extern const std::string DEFAULT_NANO_SERIAL_PORT; // e.g., "/dev/ttyUSB0", "/dev/serial0"
+    extern const uint32_t DEFAULT_NANO_BAUD_RATE;      // e.g., 115200
+
+    // --- Camera ---
+    // Default camera device (V4L2)
+    extern const std::string DEFAULT_CAMERA_DEVICE; // e.g., "/dev/video0"
+    extern const int DEFAULT_CAMERA_WIDTH;          // e.g., 640
+    extern const int DEFAULT_CAMERA_HEIGHT;         // e.g., 480
+    extern const int DEFAULT_CAMERA_FPS;            // e.g., 30
+
+    // --- Vehicle Physical Parameters ---
+    // These might be used for navigation/path planning calculations
+    extern const float VEHICLE_WIDTH_MM;  // mm
+    extern const float VEHICLE_LENGTH_MM; // mm
+    extern const float WHEELBASE_MM;      // mm (distance between front and rear axles)
+
+    // --- Mission Parameters ---
+    // Thresholds for positional memory comparisons
+    extern const float POSITIONAL_SIMILARITY_THRESHOLD_INITIAL;  // For stopping at start
+    extern const float POSITIONAL_SIMILARITY_THRESHOLD_PRE_STOP; // For fine-tuning stop
+
+    // Lap counting thresholds (to be refined)
+    extern const float MIN_DISTANCE_TO_COUNT_LAP_MM; // Minimum distance from a section boundary to count a lap
+
+} // namespace config
+
+#endif // VEHICLE_CONFIG_H// control/path_planner.cpp
+// Implementation of PathPlanner
+
+#include "path_planner.h"
+#include <iostream>
+#include <algorithm> // For std::max, std::min
+#include "../navigation/mission_state.h"
+PathPlanner::PathPlanner() : lastKnownChallenge(ChallengeType::UNKNOWN)
+{
+    // Constructor
 }
 
-# CMakeLists.txt
-# Build configuration for WRO 2025 Pi-side application
+bool PathPlanner::initialize(std::shared_ptr<LapCounter> lapCounter /*, std::shared_ptr<SignDetector> signDetector*/)
+{
+    if (!lapCounter /* || !signDetector */)
+    {
+        std::cerr << "PathPlanner: Invalid dependencies provided." << std::endl;
+        return false;
+    }
+    this->lapCounter = lapCounter;
+    // this->signDetector = signDetector;
+    std::cout << "PathPlanner: Initialized with dependencies." << std::endl;
+    return true;
+}
 
-cmake_minimum_required(VERSION 3.10)
+NavigationCommand PathPlanner::plan(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
+{
 
-# Set the project name and version
-project(WRO2025_Vehicle_Controller VERSION 1.0)
+    // Update internal state if challenge type changed
+    if (missionState.getChallengeType() != lastKnownChallenge)
+    {
+        lastKnownChallenge = missionState.getChallengeType();
+        std::cout << "PathPlanner: Challenge type changed to "
+                  // OLD: << (lastKnownChallenge == MissionState::ChallengeType::OPEN_CHALLENGE ? "Open" : "Obstacle")
+                  << (lastKnownChallenge == ChallengeType::OPEN_CHALLENGE ? "Open" : "Obstacle") // <-- NEW
+                  << std::endl;
+    }
 
-# Specify the C++ standard (C++14 or C++17 is common for Pi projects)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+    // Dispatch to specific planning logic based on mission phase and challenge type
+    switch (missionState.getPhase())
+    {
+    case MissionPhase::DRIVING_LAPS:
+        if (missionState.isOpenChallenge())
+        {
+            return planForOpenChallenge(sensorData, visionData, missionState);
+        }
+        else if (missionState.isObstacleChallenge())
+        {
+            return planForObstacleChallenge(sensorData, visionData, missionState);
+        }
+        break;
 
-# --- Find Required Libraries ---
-# Find OpenCV package (adjust COMPONENTS as needed, e.g., imgproc, videoio)
-# This assumes OpenCV is installed on the Pi (e.g., via apt install libopencv-dev)
-find_package(OpenCV REQUIRED)
+    case MissionPhase::STOPPING_AT_START:
+        return planForStopping(sensorData, visionData, missionState);
+        break;
 
-# --- Source Files ---
-# Recursively find all .cpp files in the src directory and its subdirectories
-# This is convenient but can sometimes be less explicit than listing files.
-# For better control, you can list source files explicitly.
-file(GLOB_RECURSE SOURCES "src/*.cpp")
+    case MissionPhase::FINDING_PARKING:
+    case MissionPhase::PARKING:
+        if (missionState.isObstacleChallenge())
+        {
+            return planForParking(sensorData, visionData, missionState);
+        }
+        break;
 
-# --- Executable ---
-# Create the executable named after the project
-# **** THIS MUST COME BEFORE target_* commands ****
-add_executable(${PROJECT_NAME} ${SOURCES})
+    case MissionPhase::EMERGENCY_STOPPED:
+        return NavigationCommand(NavigationCommand::Action::EMERGENCY_STOP, 0.0f);
+        break;
 
-# --- Include Directories ---
-# Add the 'src' directory and 'include' directory (if you use it) to the include path
-# This allows #include "module/header.h" to work
-# **** MOVED AFTER add_executable ****
-target_include_directories(${PROJECT_NAME} PRIVATE src)
+    // Other phases (PRE_START, WAITING_FOR_GO, COMPLETED) should not require path planning
+    default:
+        // Default action if not in a driving phase
+        return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, 0.0f);
+        break;
+    }
 
-# --- Link Libraries ---
-# Link the required libraries to the executable
-# Link OpenCV libraries
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+    // Default fallback (should ideally not be reached in normal flow)
+    std::cerr << "PathPlanner: No specific plan for current state. Defaulting to GO_STRAIGHT." << std::endl;
+    return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, 0.5f);
+}
 
-# --- Compiler Options (Optional but useful) ---
-# Add warnings, optimizations, etc.
-# -Wall: Enable most common warnings
-# -Wextra: Enable extra warnings
-# -O2: Optimization level 2 (balance between speed and compilation time)
-# -g: Include debugging information
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -O2 -g)
+// --- Private Helper Functions ---
 
-# --- Installation (Optional) ---
-# Define where the executable should be installed (e.g., 'sudo make install')
-# install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+NavigationCommand PathPlanner::planForOpenChallenge(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
+{
+    (void)visionData;
+    (void)missionState;
+    // In Open Challenge, there are no signs. Strategy is usually wall following.
+    // Common strategies: Left Wall Following, Right Wall Following.
+    // For simplicity, let's assume a basic left wall following strategy.
 
-# --- Custom Targets (Optional) ---
-# You could add a custom target to run your vehicle script, if you create one
-# add_custom_target(run
-#     COMMAND ${PROJECT_NAME}
-#     DEPENDS ${PROJECT_NAME}
-#     WORKING_DIRECTORY ${CMAKE_PROJECT_DIR}
-# )
+    // Basic obstacle avoidance check
+    float turnDirection = 0.0f;
+    if (needsObstacleAvoidance(sensorData, turnDirection))
+    {
+        float speed = 0.4f; // Slow down for obstacle
+        if (turnDirection < 0)
+        {
+            // Turn left
+            return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, speed); // Assume steering is handled by lower level
+        }
+        else if (turnDirection > 0)
+        {
+            // Turn right
+            return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, speed);
+        }
+        else
+        {
+            // Stop or back up?
+            return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, 0.0f);
+        }
+    }
 
+    // Default left wall following logic (simplified)
+    // Aim to maintain a certain distance from the left wall
+    int16_t leftDistance = sensorData.leftDistance;
+    int16_t frontDistanceVar = sensorData.frontDistance;
+    (void)frontDistanceVar;    // Unused for now
+    float desiredSpeed = 0.6f; // Medium speed
+    // Action is implicit in speed/steering calculation in this simplified view
+    // A more complex planner might explicitly set FOLLOW_LEFT_LANE
 
+    // Simple proportional controller for steering based on left distance
+    // Target distance from left wall (mm)
+    const float TARGET_LEFT_DISTANCE = 200.0f;
+    // const float MAX_STEERING_ADJUSTMENT = 20.0f; // Degrees
 
-identiry the error correctly and give me the exact solution based on the error. as you build the full code so i expected that all file and code hireachy is maintained properly but you make me frustrated finally
+    float distanceError = static_cast<float>(leftDistance) - TARGET_LEFT_DISTANCE;
+    // Clamp error to prevent overreaction
+    distanceError = std::max(-300.0f, std::min(300.0f, distanceError));
+
+    // This logic would typically result in a servo angle command in the VehicleController
+    // For example: base_angle + Kp * error
+    // If error is positive (too far from wall), turn left (decrease servo angle)
+    // If error is negative (too close to wall), turn right (increase servo angle)
+
+    // For now, we just return a command indicating intent and speed
+    // The actual steering calculation happens in VehicleController/Actuators
+    return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, desiredSpeed);
+}
+
+NavigationCommand PathPlanner::planForObstacleChallenge(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
+{
+    // In Obstacle Challenge, follow traffic signs.
+    // Green sign means follow left lane.
+    // Red sign means follow right lane.
+    (void)sensorData;
+    (void)visionData;
+    (void)missionState; // If not used yet
+    // Basic obstacle avoidance check (takes precedence)
+    float turnDirection = 0.0f;
+    if (needsObstacleAvoidance(sensorData, turnDirection))
+    {
+        float speed = 0.4f;
+        return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, speed);
+    }
+
+    // Determine lane to follow based on sign detection
+    // This assumes VisionSnapshot has been processed to detect signs
+    bool followLeft = false;
+    bool followRight = false;
+
+    // Simplified logic: if both signs detected, prioritize based on last known rule or proximity
+    // If only one sign, follow that rule.
+    // If no signs, default to a safe strategy (e.g., center, or last known rule)
+
+    if (visionData.signLeftDetected && visionData.signRightDetected)
+    {
+        // Conflict resolution needed. Simple approach: follow the closer one.
+        // Assuming centroid X coordinates are available in VisionSnapshot
+        // (This requires updating VisionSnapshot struct and image_processor)
+        // For now, let's assume a simple flag or last known state is used.
+        // Placeholder logic:
+        followLeft = true; // Default to left if conflict, or use more sophisticated logic
+        // std::cout << "PathPlanner: Conflict - Both signs detected. Following default (Left)." << std::endl;
+    }
+    else if (visionData.signLeftDetected)
+    {
+        followLeft = true;
+        // std::cout << "PathPlanner: Green sign detected. Following left lane." << std::endl;
+    }
+    else if (visionData.signRightDetected)
+    {
+        followRight = true;
+        // std::cout << "PathPlanner: Red sign detected. Following right lane." << std::endl;
+    }
+    else
+    {
+        // No signs detected. Continue with last known strategy or default.
+        // This is a common scenario between signs.
+        // std::cout << "PathPlanner: No signs detected. Continuing last strategy or default." << std::endl;
+        // For now, we'll assume a default action like GO_STRAIGHT
+        // A more robust system might remember the last sign or use path prediction.
+    }
+
+    float desiredSpeed = 0.6f; // Medium speed
+
+    if (followLeft)
+    {
+        return NavigationCommand(NavigationCommand::Action::FOLLOW_LEFT_LANE, desiredSpeed);
+    }
+    else if (followRight)
+    {
+        return NavigationCommand(NavigationCommand::Action::FOLLOW_RIGHT_LANE, desiredSpeed);
+    }
+    else
+    {
+        // No specific lane command, go straight
+        return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, desiredSpeed);
+    }
+}
+
+NavigationCommand PathPlanner::planForStopping(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
+{
+    (void)sensorData;
+    (void)visionData;
+    (void)missionState;
+    // This phase is for stopping in the start section after 3 laps.
+    // The main logic for *when* to stop should be in main.cpp using PositionalMemory.
+    // The PathPlanner's role here might be to refine the approach or execute the final stop.
+
+    // Indicate to the control system that stopping is the goal.
+    // The actual stopping maneuver (speed=0, precise positioning) is handled by VehicleController
+    // based on this command and potentially further input from PositionalMemory/Vision.
+
+    // For now, simply command a stop.
+    // A more advanced version might include a "slow_approach" action.
+    std::cout << "PathPlanner: Planning for STOP in start section." << std::endl;
+    return NavigationCommand(NavigationCommand::Action::STOP_IN_START, 0.0f);
+}
+
+NavigationCommand PathPlanner::planForParking(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState)
+{
+    (void)sensorData;
+    (void)visionData;
+    (void)missionState;
+    // Handle parking phases
+    if (missionState.getPhase() == MissionPhase::FINDING_PARKING)
+    {
+        // Logic to search for the parking lot entrance.
+        // This could involve:
+        // - Looking for a specific gap in the outer wall (using vision/US)
+        // - Following the outer wall until the gap is found
+        // - Entering a state where the vehicle is aligned with the gap
+
+        // Simplified placeholder: Assume we are looking for a large opening on the right
+        // indicated by a sudden increase in right sensor distance.
+        // A real implementation would be more robust.
+        if (sensorData.rightDistance > 400)
+        { // Example threshold for gap
+            std::cout << "PathPlanner: Parking entrance potentially found (large right distance)." << std::endl;
+            // This would likely trigger a state change in MissionState to PARKING
+            // and a specific parking maneuver command.
+            // For now, we can signal readiness.
+            return NavigationCommand(NavigationCommand::Action::EXECUTE_PARKING, 0.3f); // Slow approach speed
+        }
+        else
+        {
+            // Continue searching, e.g., follow outer wall
+            return NavigationCommand(NavigationCommand::Action::FOLLOW_RIGHT_LANE, 0.5f);
+        }
+    }
+    else if (missionState.getPhase() == MissionPhase::PARKING)
+    {
+        // Execute the specific parallel parking maneuver.
+        // This is a complex sequence of movements.
+        // The command here signals that the complex maneuver should be executed.
+        // The actual sequence of motor/servo commands would be handled by a dedicated
+        // ParkingAssistant module or state machine within VehicleController.
+        std::cout << "PathPlanner: Executing PARKING maneuver." << std::endl;
+        return NavigationCommand(NavigationCommand::Action::EXECUTE_PARKING, 0.0f); // Speed controlled internally by parking sequence
+    }
+
+    // Default fallback for parking phases
+    return NavigationCommand(NavigationCommand::Action::GO_STRAIGHT, 0.0f);
+}
+
+bool PathPlanner::needsObstacleAvoidance(const SensorData &sensorData, float &turnDirection)
+{
+    turnDirection = 0.0f; // Default: no turn needed
+
+    // Check front sensor for immediate obstacles
+    if (sensorData.frontDistance < 150)
+    { // e.g., 15cm
+        // Obstacle ahead, need to decide turn direction
+        // Use left/right sensors to decide
+        if (sensorData.leftDistance > sensorData.rightDistance)
+        {
+            turnDirection = -1.0f; // Turn left
+        }
+        else
+        {
+            turnDirection = 1.0f; // Turn right
+        }
+        return true;
+    }
+
+    // Optional: Check side sensors for very close walls that might require correction
+    // This is more for fine-tuning path than major avoidance.
+    // Example:
+    // if (sensorData.leftDistance < 50) { turnDirection = 1.0f; return true; }
+    // if (sensorData.rightDistance < 50) { turnDirection = -1.0f; return true; }
+
+    return false; // No immediate obstacle avoidance needed
+}// control/path_planner.h
+// Makes high-level path planning decisions
+
+#ifndef PATH_PLANNER_H
+#define PATH_PLANNER_H
+
+#include <cstdint>
+#include <memory>
+// Assuming necessary data structures are defined
+#include "../sensors/sensor_data.h"
+#include "../navigation/positional_memory.h" // For VisionSnapshot
+#include "../navigation/mission_state.h"     // For ChallengeType, MissionPhase
+
+// Forward declarations
+class LapCounter;   // Dependency
+class SignDetector; // To be implemented
+
+// Structure to hold the high-level navigation decision
+struct NavigationCommand
+{
+    enum class Action
+    {
+        FOLLOW_LEFT_LANE,
+        FOLLOW_RIGHT_LANE,
+        GO_STRAIGHT,
+        STOP_IN_START,
+        FIND_PARKING_ENTRANCE,
+        EXECUTE_PARKING,
+        EMERGENCY_STOP
+    };
+
+    Action action;
+    float desiredSpeed; // Normalized or mapped speed command (-1.0 to 1.0, or 0-100%)
+
+    NavigationCommand() : action(Action::GO_STRAIGHT), desiredSpeed(0.0f) {}
+    NavigationCommand(Action a, float speed) : action(a), desiredSpeed(speed) {}
+};
+
+class PathPlanner
+{
+public:
+    PathPlanner();
+    ~PathPlanner() = default;
+
+    // Initialize with dependencies
+    bool initialize(std::shared_ptr<LapCounter> lapCounter /*, std::shared_ptr<SignDetector> signDetector*/);
+
+    // Generate the next navigation command based on current state
+    NavigationCommand plan(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState);
+
+private:
+    std::shared_ptr<LapCounter> lapCounter;
+    // std::shared_ptr<SignDetector> signDetector; // Add when SignDetector is implemented
+
+    // Internal state for decision making
+    ChallengeType lastKnownChallenge;
+
+    // Helper functions for specific planning logic
+    NavigationCommand planForOpenChallenge(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState);
+    NavigationCommand planForObstacleChallenge(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState);
+    NavigationCommand planForStopping(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState);
+    NavigationCommand planForParking(const SensorData &sensorData, const VisionSnapshot &visionData, const MissionState &missionState);
+
+    // Basic obstacle avoidance logic (fallback or supplement)
+    bool needsObstacleAvoidance(const SensorData &sensorData, float &turnDirection); // turnDirection: -1=left, 1=right, 0=none
+};
+
+#endif // PATH_PLANNER_H// navigation/lap_counter.cpp
+// Implementation of LapCounter
+
+#include "lap_counter.h"
+#include <iostream>
+#include <cmath> // For fabs, etc. if needed
+
+LapCounter::LapCounter()
+    : currentLap(0), lapCompletedFlag(false), inStartSectionFlag(false),
+      sectionsPassedInCurrentLap(0), hasLeftStartSection(false)
+{
+    // Constructor initializes atomic flags and member variables
+}
+
+bool LapCounter::initialize()
+{
+    // Currently no complex initialization needed
+    // Could initialize pointers to CourseMap or load parameters later
+    reset(); // Ensure a clean state on initialization
+    return true;
+}
+
+void LapCounter::reset()
+{
+    currentLap.store(0);
+    lapCompletedFlag.store(false);
+    inStartSectionFlag.store(false);
+    sectionsPassedInCurrentLap = 0;
+    hasLeftStartSection = false;
+    // std::cout << "LapCounter: Reset to initial state." << std::endl;
+}
+
+void LapCounter::update(const SensorData &sensorData, const VisionSnapshot &visionData)
+{
+    // 1. Determine if we are in the start section
+    // This is a placeholder. Real logic would compare sensor/vision data
+    // against a known start section profile or use PositionalMemory.
+    // For now, we'll assume another part of the system (e.g., main loop logic
+    // using PositionalMemory) calls setInStartSection().
+    // bool currentlyInStart = determineIfInStartSection(sensorData, visionData);
+    // setInStartSection(currentlyInStart); // This will update the atomic flag
+
+    // 2. Check for transitions between sections (simplified logic)
+    checkForSectionTransition(sensorData, visionData);
+
+    // 3. Check if a lap has been completed based on sections passed and start section logic
+    checkForLapCompletion();
+}
+
+int LapCounter::getCurrentLap() const
+{
+    return currentLap.load();
+}
+
+bool LapCounter::isLapCompleted() const
+{
+    return lapCompletedFlag.load();
+}
+
+void LapCounter::acknowledgeLapCompletion()
+{
+    lapCompletedFlag.store(false);
+}
+
+bool LapCounter::isInStartSection() const
+{
+    return inStartSectionFlag.load();
+}
+
+void LapCounter::setInStartSection(bool inStart)
+{
+    inStartSectionFlag.store(inStart);
+    // std::cout << "LapCounter: In Start Section set to " << (inStart ? "true" : "false") << std::endl;
+}
+
+// --- Private Helper Functions ---
+
+// Placeholder for section transition logic
+// A real implementation might:
+// - Use US sensors to detect distance to walls changing significantly
+// - Use vision to detect track features or the absence of signs
+// - Integrate with a CourseMap to know expected section boundaries
+void LapCounter::checkForSectionTransition(const SensorData &sensorData, const VisionSnapshot &visionData)
+{
+    (void)visionData;
+    // This is a very simplified example logic.
+    // It assumes that passing a certain distance or a significant change in US readings
+    // indicates entering a new section. This is highly dependent on track layout and vehicle speed.
+
+    // Example: Increment section counter if we've traveled a certain estimated distance
+    // This is not robust and needs refinement.
+    static float estimatedDistance = 0.0f;
+    (void)estimatedDistance;               // Placeholder to avoid unused variable warning
+    static SensorData lastSensorData = {}; // Initialize with default values
+    static bool firstUpdate = true;
+
+    if (firstUpdate)
+    {
+        lastSensorData = sensorData;
+        firstUpdate = false;
+        return;
+    }
+
+    // Simple distance estimation using front sensor change (very rough)
+    // A better approach would integrate speed over time or use encoders/IMU
+    float frontDelta = static_cast<float>(sensorData.frontDistance) - static_cast<float>(lastSensorData.frontDistance);
+    // Assume if front distance changed by a large amount, we might have turned a corner
+    // This is flawed logic and just for demonstration.
+    if (std::abs(frontDelta) > 300.0f)
+    { // e.g., 30cm change
+        sectionsPassedInCurrentLap++;
+        // std::cout << "LapCounter: Estimated section transition. Sections passed: " << sectionsPassedInCurrentLap << std::endl;
+        lastSensorData = sensorData; // Update for next comparison
+
+        // Simple heuristic: If we think we left the start section
+        if (!hasLeftStartSection && sectionsPassedInCurrentLap >= 1)
+        {
+            hasLeftStartSection = true;
+            // std::cout << "LapCounter: Detected leaving start section." << std::endl;
+        }
+    }
+    // Add more sophisticated logic here based on actual sensor fusion and track knowledge.
+}
+
+void LapCounter::checkForLapCompletion()
+{
+    // A lap is completed after passing 8 sections (as per rules)
+    if (sectionsPassedInCurrentLap >= 8)
+    {
+        // Additional check: We must have left the start section and then returned
+        // This check is simplified. Real logic is more complex.
+        if (hasLeftStartSection /* && isInStartSection() */)
+        { // isInStartSection check depends on external call to setInStartSection
+            int newLap = currentLap.load() + 1;
+            if (newLap <= 3)
+            { // Only count up to 3 laps
+                currentLap.store(newLap);
+                lapCompletedFlag.store(true);
+                sectionsPassedInCurrentLap = 0; // Reset for next lap
+                hasLeftStartSection = false;    // Reset for next lap
+                std::cout << "LapCounter: Lap " << newLap << " completed!" << std::endl;
+            }
+        }
+        else
+        {
+            // We completed 8 sections but never left start, or are not back in start
+            // This might indicate an error or a different track configuration logic is needed.
+            // For now, we'll just reset the section counter to prevent overflow/confusion
+            // unless we are sure we are in a new lap phase.
+            // A more robust system would track absolute position or use landmarks.
+            // This logic needs careful design based on actual sensor data interpretation.
+            // As a fallback, if we get too many sections without a lap, reset.
+            if (sectionsPassedInCurrentLap > 12)
+            { // Arbitrary large number
+                std::cerr << "LapCounter: Warning - Section counter seems stuck. Resetting." << std::endl;
+                sectionsPassedInCurrentLap = 0;
+                hasLeftStartSection = false;
+            }
+        }
+    }
+}
+
+// Placeholder for start section detection
+// bool LapCounter::determineIfInStartSection(const SensorData& sensorData, const VisionSnapshot& visionData) {
+//     // This would contain the actual logic to compare current state with the known start section state.
+//     // It could use PositionalMemory, CourseMap, or direct sensor/vision analysis.
+//     // For example:
+//     // return positionalMemory->isLikelyAtInitialPosition(sensorData, visionData, 0.9f);
+//     return false; // Placeholder
+// }// navigation/lap_counter.h
+// Counts the number of laps completed by the vehicle
+
+#ifndef LAP_COUNTER_H
+#define LAP_COUNTER_H
+
+#include <atomic>
+#include <memory>
+// Assuming SensorData and VisionSnapshot are defined in these headers
+#include "../sensors/sensor_data.h"
+#include "positional_memory.h" // For VisionSnapshot
+
+// Forward declarations for dependencies if needed
+class CourseMap; // To be implemented later
+
+class LapCounter
+{
+public:
+    LapCounter();
+    ~LapCounter() = default;
+
+    // Initialize the lap counter, potentially with a reference to CourseMap
+    bool initialize(); // Add CourseMap* if needed later
+
+    // Reset the counter to zero laps and clear state
+    void reset();
+
+    // Update the lap counter based on new sensor/vision data
+    // This should be called regularly in the main loop
+    void update(const SensorData &sensorData, const VisionSnapshot &visionData);
+
+    // Get the current lap number (0-based: 0, 1, 2)
+    int getCurrentLap() const;
+
+    // Check if a lap has just been completed
+    bool isLapCompleted() const;
+
+    // Acknowledge that the lap completion has been processed
+    void acknowledgeLapCompletion();
+
+    // Check if the vehicle is currently in the start/finish section
+    // This is crucial for the final stopping logic
+    bool isInStartSection() const;
+
+    // Setter for start section state (might be set by other logic like PositionalMemory comparison)
+    void setInStartSection(bool inStart);
+
+private:
+    std::atomic<int> currentLap;
+    std::atomic<bool> lapCompletedFlag; // Flag to indicate a new lap was completed
+    std::atomic<bool> inStartSectionFlag;
+
+    // State for lap counting logic
+    // This is a simplified placeholder. Real logic might involve:
+    // - Tracking passage through specific sections (e.g., counting 8 sections for a lap)
+    // - Using positional memory to identify the start section
+    // - Integrating with CourseMap
+
+    // Example simple state variables (needs refinement):
+    int sectionsPassedInCurrentLap; // Counter for sections passed
+    bool hasLeftStartSection;       // Flag to ensure we leave start before counting a lap
+
+    // Helper functions for lap counting logic
+    void checkForSectionTransition(const SensorData &sensorData, const VisionSnapshot &visionData);
+    void checkForLapCompletion();
+};
+
+#endif // LAP_COUNTER_H// mission_state.cpp
+// Implementation of MissionState
+
+#include "mission_state.h"
+#include <iostream> // For potential logging/debugging
+
+MissionState::MissionState()
+    : challengeType(ChallengeType::UNKNOWN),
+      phase(MissionPhase::PRE_START),
+      startPosition(StartPosition::UNKNOWN),
+      currentLap(0),
+      lapCompleted(false),
+      inStartSection(false),
+      nearParkingLot(false)
+{
+    // Constructor initializes all state variables to known default values
+}
+
+void MissionState::setPhase(MissionPhase newPhase)
+{
+    // Optional: Add logging here to track state transitions
+    // std::cout << "Mission State Transition: " << static_cast<int>(phase) << " -> " << static_cast<int>(newPhase) << std::endl;
+    phase = newPhase;
+}// mission_state.h
+// Tracks the overall state of the mission (Open/Obstacle, phase, scoring conditions)
+
+#ifndef MISSION_STATE_H
+#define MISSION_STATE_H
+
+#include <cstdint>
+
+enum class ChallengeType
+{
+    UNKNOWN,
+    OPEN_CHALLENGE,
+    OBSTACLE_CHALLENGE
+};
+
+enum class MissionPhase
+{
+    PRE_START,         // Before physical button press
+    WAITING_FOR_GO,    // After button press, waiting for Pi's "GO" command
+    DRIVING_LAPS,      // Driving the 3 main laps
+    FINDING_PARKING,   // (Obstacle only) Finding the parking lot entrance
+    PARKING,           // (Obstacle only) Executing the parking maneuver
+    STOPPING_AT_START, // Stopping in the start section (Open) or finishing (Obstacle)
+    COMPLETED,         // Mission successfully finished
+    EMERGENCY_STOPPED  // Stopped due to E-Stop or error
+};
+
+enum class StartPosition
+{
+    UNKNOWN,
+    REGULAR_ZONE, // Started in the middle zone above parking lot
+    PARKING_LOT   // Started inside the parking lot
+};
+
+class MissionState
+{
+public:
+    MissionState();
+
+    // Getters
+    ChallengeType getChallengeType() const { return challengeType; }
+    MissionPhase getPhase() const { return phase; }
+    StartPosition getStartPosition() const { return startPosition; }
+    int getCurrentLap() const { return currentLap; }
+    bool isLapCompleted() const { return lapCompleted; }
+    bool isInStartSection() const { return inStartSection; }
+    bool isNearParkingLot() const { return nearParkingLot; } // For Obstacle challenge
+
+    // Setters (Called by other modules)
+    void setChallengeType(ChallengeType type) { challengeType = type; }
+    void setPhase(MissionPhase newPhase);
+    void setStartPosition(StartPosition pos) { startPosition = pos; }
+    void setCurrentLap(int lap) { currentLap = lap; }
+    void setLapCompleted(bool completed) { lapCompleted = completed; }
+    void setInStartSection(bool inStart) { inStartSection = inStart; }
+    void setNearParkingLot(bool near) { nearParkingLot = near; }
+
+    // Utility functions
+    bool isObstacleChallenge() const { return challengeType == ChallengeType::OBSTACLE_CHALLENGE; }
+    bool isOpenChallenge() const { return challengeType == ChallengeType::OPEN_CHALLENGE; }
+    bool isDrivingPhase() const
+    {
+        return phase == MissionPhase::DRIVING_LAPS ||
+               phase == MissionPhase::FINDING_PARKING ||
+               phase == MissionPhase::PARKING ||
+               phase == MissionPhase::STOPPING_AT_START;
+    }
+
+private:
+    ChallengeType challengeType;
+    MissionPhase phase;
+    StartPosition startPosition;
+
+    int currentLap;      // 0-based (0, 1, 2)
+    bool lapCompleted;   // Flag for lap completion logic
+    bool inStartSection; // Flag set by lap counter/navigation when in start zone
+    bool nearParkingLot; // Flag set by navigation when approaching parking lot (Obstacle)
+};
+
+#endif // MISSION_STATE_H// positional_memory.cpp
+// Implementation of PositionalMemory
+
+#include "positional_memory.h"
+#include <cmath>     // For fabs, sqrt
+#include <algorithm> // For max
+#include <iostream>  // For debugging
+
+PositionalMemory::PositionalMemory()
+    : initialDataStored(false), preStopDataStored(false), parkingEntranceDataStored(false)
+{
+    // Initialize stored data structs to zero/default
+    // In practice, you might initialize SensorData members explicitly
+}
+
+void PositionalMemory::storeInitialPosition(const SensorData &sensorSnapshot, const VisionSnapshot &visionSnapshot)
+{
+    initialSensorData = sensorSnapshot;
+    initialVisionSnapshot = visionSnapshot;
+    initialDataStored = true;
+    // std::cout << "PositionalMemory: Initial position stored." << std::endl;
+}
+
+void PositionalMemory::storePreStopPosition(const SensorData &sensorSnapshot, const VisionSnapshot &visionSnapshot)
+{
+    preStopSensorData = sensorSnapshot;
+    preStopVisionSnapshot = visionSnapshot;
+    preStopDataStored = true;
+    // std::cout << "PositionalMemory: Pre-stop position stored." << std::endl;
+}
+
+void PositionalMemory::storeParkingEntrancePosition(const SensorData &sensorSnapshot, const VisionSnapshot &visionSnapshot)
+{
+    parkingEntranceSensorData = sensorSnapshot;
+    parkingEntranceVisionSnapshot = visionSnapshot;
+    parkingEntranceDataStored = true;
+    // std::cout << "PositionalMemory: Parking entrance position stored." << std::endl;
+}
+
+float PositionalMemory::compareWithInitial(const SensorData &currentSensorData, const VisionSnapshot &currentVisionData) const
+{
+    if (!initialDataStored)
+        return 0.0f;
+
+    float sensorSim = calculateSensorSimilarity(initialSensorData, currentSensorData);
+    float visionSim = calculateVisionSimilarity(initialVisionSnapshot, currentVisionData);
+    // Simple average, could be weighted
+    return (sensorSim + visionSim) / 2.0f;
+}
+
+float PositionalMemory::compareWithPreStop(const SensorData &currentSensorData, const VisionSnapshot &currentVisionData) const
+{
+    if (!preStopDataStored)
+        return 0.0f;
+
+    float sensorSim = calculateSensorSimilarity(preStopSensorData, currentSensorData);
+    float visionSim = calculateVisionSimilarity(preStopVisionSnapshot, currentVisionData);
+    // Simple average, could be weighted
+    return (sensorSim + visionSim) / 2.0f;
+}
+
+bool PositionalMemory::isLikelyAtInitialPosition(const SensorData &currentSensorData, const VisionSnapshot &currentVisionData, float threshold) const
+{
+    float similarity = compareWithInitial(currentSensorData, currentVisionData);
+    return similarity >= threshold;
+}
+
+bool PositionalMemory::isLikelyAtPreStopPosition(const SensorData &currentSensorData, const VisionSnapshot &currentVisionData, float threshold) const
+{
+    float similarity = compareWithPreStop(currentSensorData, currentVisionData);
+    return similarity >= threshold;
+}
+
+// --- Placeholder Similarity Calculations ---
+// These need to be refined based on actual data ranges and importance
+
+float PositionalMemory::calculateSensorSimilarity(const SensorData &data1, const SensorData &data2) const
+{
+    // Example using US sensors - normalize and calculate inverse distance
+    // Assume max distance is 2000mm (2m) for normalization
+    const float MAX_DIST = 2000.0f;
+    float totalSim = 0.0f;
+    int count = 4; // front, right, back, left
+
+    float diff_front = std::abs(static_cast<float>(data1.frontDistance) - static_cast<float>(data2.frontDistance)) / MAX_DIST;
+    float diff_right = std::abs(static_cast<float>(data1.rightDistance) - static_cast<float>(data2.rightDistance)) / MAX_DIST;
+    float diff_back = std::abs(static_cast<float>(data1.backDistance) - static_cast<float>(data2.backDistance)) / MAX_DIST;
+    float diff_left = std::abs(static_cast<float>(data1.leftDistance) - static_cast<float>(data2.leftDistance)) / MAX_DIST;
+
+    // Similarity is 1 - normalized difference (0 difference = 1.0 sim, max difference = 0.0 sim)
+    totalSim += (1.0f - std::min(1.0f, diff_front));
+    totalSim += (1.0f - std::min(1.0f, diff_right));
+    totalSim += (1.0f - std::min(1.0f, diff_back));
+    totalSim += (1.0f - std::min(1.0f, diff_left));
+
+    // Simple average
+    return totalSim / static_cast<float>(count);
+}
+
+float PositionalMemory::calculateVisionSimilarity(const VisionSnapshot &data1, const VisionSnapshot &data2) const
+{
+    // Example using boolean sign detection and edge positions
+    float totalSim = 0.0f;
+    int count = 4;
+
+    // Sign detection similarity (1.0 if same, 0.0 if different)
+    float signLeftSim = (data1.signLeftDetected == data2.signLeftDetected) ? 1.0f : 0.0f;
+    float signRightSim = (data1.signRightDetected == data2.signRightDetected) ? 1.0f : 0.0f;
+    totalSim += signLeftSim;
+    totalSim += signRightSim;
+
+    // Edge position similarity (assuming image width is 640, so max diff is 640)
+    const float MAX_EDGE_DIFF = 640.0f;
+    float edgeLeftDiff = std::abs(data1.avgLeftEdgeX - data2.avgLeftEdgeX) / MAX_EDGE_DIFF;
+    float edgeRightDiff = std::abs(data1.avgRightEdgeX - data2.avgRightEdgeX) / MAX_EDGE_DIFF;
+    totalSim += (1.0f - std::min(1.0f, edgeLeftDiff));
+    totalSim += (1.0f - std::min(1.0f, edgeRightDiff));
+
+    return totalSim / static_cast<float>(count);
+}// positional_memory.h
+// Stores and compares positional data for start/stop and parking logic
+
+#ifndef POSITIONAL_MEMORY_H
+#define POSITIONAL_MEMORY_H
+
+#include <vector>
+#include <cstdint>
+// Assuming we'll get sensor data in a format similar to Nano's CompactSensorData
+#include "../sensors/sensor_data.h" // This will define SensorData or similar
+
+// Forward declarations or includes for vision data structures if needed
+// For now, let's assume we store ROI descriptors or simple color/edge info
+struct VisionSnapshot
+{
+    // Placeholder for vision data
+    // Could be keypoint descriptors, histogram data, simple flags
+    // For initial version, maybe just store if signs were seen and where
+    bool signLeftDetected;
+    bool signRightDetected;
+    float avgLeftEdgeX;  // Average X position of left edge in ROI
+    float avgRightEdgeX; // Average X position of right edge in ROI
+    // Add more fields as vision processing becomes concrete
+};
+
+class PositionalMemory
+{
+public:
+    PositionalMemory();
+
+    // Store the initial state when the mission officially starts (after GO signal)
+    void storeInitialPosition(const SensorData &sensorSnapshot, const VisionSnapshot &visionSnapshot);
+
+    // Store the position just before attempting to stop in the start section
+    // This might be slightly different from initial due to sensor drift or initial movement
+    void storePreStopPosition(const SensorData &sensorSnapshot, const VisionSnapshot &visionSnapshot);
+
+    // Store the position when entering the parking lot area (Obstacle challenge)
+    void storeParkingEntrancePosition(const SensorData &sensorSnapshot, const VisionSnapshot &visionSnapshot);
+
+    // Compare current state with stored initial state
+    float compareWithInitial(const SensorData &currentSensorData, const VisionSnapshot &currentVisionData) const;
+
+    // Compare current state with stored pre-stop state
+    float compareWithPreStop(const SensorData &currentSensorData, const VisionSnapshot &currentVisionData) const;
+
+    // Check if we are likely back at the initial position (for stopping)
+    bool isLikelyAtInitialPosition(const SensorData &currentSensorData, const VisionSnapshot &currentVisionData, float threshold = 0.8f) const;
+
+    // Check if we are likely at the pre-stop position (for fine-tuning stop)
+    bool isLikelyAtPreStopPosition(const SensorData &currentSensorData, const VisionSnapshot &currentVisionData, float threshold = 0.9f) const;
+
+    // Getters for stored data (useful for debugging or navigation)
+    bool hasInitialData() const { return initialDataStored; }
+    bool hasPreStopData() const { return preStopDataStored; }
+    const SensorData &getInitialSensorData() const { return initialSensorData; }
+    const VisionSnapshot &getInitialVisionData() const { return initialVisionSnapshot; }
+
+private:
+    bool initialDataStored;
+    bool preStopDataStored;
+    bool parkingEntranceDataStored;
+
+    SensorData initialSensorData;
+    VisionSnapshot initialVisionSnapshot;
+
+    SensorData preStopSensorData;
+    VisionSnapshot preStopVisionSnapshot;
+
+    SensorData parkingEntranceSensorData;
+    VisionSnapshot parkingEntranceVisionSnapshot;
+
+    // Helper function to calculate a simple similarity score between sensor data
+    // This is a placeholder - real implementation would be more complex
+    float calculateSensorSimilarity(const SensorData &data1, const SensorData &data2) const;
+
+    // Helper function to calculate a simple similarity score between vision data
+    float calculateVisionSimilarity(const VisionSnapshot &data1, const VisionSnapshot &data2) const;
+};
+
+#endif // POSITIONAL_MEMORY_H// sensor_data.h
+// Defines the structure for sensor data received from the Nano
+
+#ifndef SENSOR_DATA_H
+#define SENSOR_DATA_H
+
+#include <cstdint> // For fixed-width integer types
+
+// This struct should exactly match the CompactSensorData struct on the Nano
+// for easy casting/interpretation of the binary data packet.
+struct __attribute__((packed)) SensorData
+{
+    uint16_t frontDistance; // 0-65535 cm
+    uint16_t rightDistance; // 0-65535 cm
+    uint16_t backDistance;  // 0-65535 cm
+    uint16_t leftDistance;  // 0-65535 cm
+    int16_t accelX;         // Scaled IMU data (e.g., milli-g)
+    int16_t accelY;         // Scaled IMU data (e.g., milli-g)
+    int16_t accelZ;         // Scaled IMU data (e.g., milli-g)
+    int16_t gyroX;          // Scaled IMU data (e.g., milli-deg/s)
+    int16_t gyroY;          // Scaled IMU data (e.g., milli-deg/s)
+    int16_t gyroZ;          // Scaled IMU data (e.g., milli-deg/s)
+    // Total: 20 bytes
+};
+
+#endif // SENSOR_DATA_H// src/utils/logger.h
+// A simple conditional logger with verbosity levels for debugging.
+
+#ifndef LOGGER_H
+#define LOGGER_H
+
+#include <iostream>
+#include <string>
+
+// --- VERBOSITY LEVELS ---
+// Define LOG_LEVEL to control verbosity.
+// Higher numbers mean more verbose output.
+// 0 = OFF, 1 = ERROR, 2 = WARN, 3 = INFO, 4 = DEBUG, 5 = VERBOSE
+// You can set this via CMake: add_compile_definitions(LOG_LEVEL=4)
+#ifndef LOG_LEVEL
+#define LOG_LEVEL 0 // Default to OFF
+#endif
+// Macro to extract filename from __FILE__ for cleaner logs
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+// --- MACROS BASED ON LOG_LEVEL ---
+#if LOG_LEVEL >= 1
+#define LOG_ERROR(msg)                                                                           \
+    do                                                                                           \
+    {                                                                                            \
+        std::cerr << "[ERROR] (" << __FILENAME__ << ":" << __LINE__ << ") " << msg << std::endl; \
+    } while (0)
+#else
+#define LOG_ERROR(msg) \
+    do                 \
+    {                  \
+    } while (0)
+#endif
+
+#if LOG_LEVEL >= 2
+#define LOG_WARN(msg)                                                                            \
+    do                                                                                           \
+    {                                                                                            \
+        std::cerr << "[WARN]  (" << __FILENAME__ << ":" << __LINE__ << ") " << msg << std::endl; \
+    } while (0)
+#else
+#define LOG_WARN(msg) \
+    do                \
+    {                 \
+    } while (0)
+#endif
+
+#if LOG_LEVEL >= 3
+#define LOG_INFO(msg)                                                                            \
+    do                                                                                           \
+    {                                                                                            \
+        std::cerr << "[INFO]  (" << __FILENAME__ << ":" << __LINE__ << ") " << msg << std::endl; \
+    } while (0)
+#else
+#define LOG_INFO(msg) \
+    do                \
+    {                 \
+    } while (0)
+#endif
+
+#if LOG_LEVEL >= 4
+#define LOG_DEBUG(msg)                                                                           \
+    do                                                                                           \
+    {                                                                                            \
+        std::cerr << "[DEBUG] (" << __FILENAME__ << ":" << __LINE__ << ") " << msg << std::endl; \
+    } while (0)
+#else
+#define LOG_DEBUG(msg) \
+    do                 \
+    {                  \
+    } while (0)
+#endif
+
+#if LOG_LEVEL >= 5
+#define LOG_VERBOSE(msg)                                                                         \
+    do                                                                                           \
+    {                                                                                            \
+        std::cerr << "[VERB]  (" << __FILENAME__ << ":" << __LINE__ << ") " << msg << std::endl; \
+    } while (0)
+#else
+#define LOG_VERBOSE(msg) \
+    do                   \
+    {                    \
+    } while (0)
+#endif
+
+// Macro to extract filename from __FILE__ for cleaner logs
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+
+#endif // LOGGER_H// src/vision/camera_interface.cpp
+// Implementation of CameraInterface using rpicam-vid subprocess and OpenCV
+
+#include "camera_interface.h"
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include <sstream>           // For building command string
+#include <unistd.h>          // For ::sleep (if needed for startup delay)
+#include <cstdio>            // For perror
+#include <memory>            // For make_shared
+#include "../utils/logger.h" // Include the logger
+
+// --- CONSTRUCTOR ---
+CameraInterface::CameraInterface()
+    : devicePath(""), frameWidth(640), frameHeight(480), targetFPS(20),
+      cameraProcess(nullptr), cameraCommand(""),
+      isInitialized(false), isCapturing(false),
+      stopCaptureFlag(false), previous_byte(0)
+{
+    // Constructor initializes atomic flags and member variables
+    frameBuffer = std::make_shared<FrameBuffer>();
+    LOG_DEBUG("CameraInterface: Constructed.");
+}
+
+// --- DESTRUCTOR ---
+CameraInterface::~CameraInterface()
+{
+    LOG_DEBUG("CameraInterface: Destructor called.");
+    stopCapture(); // Ensure process is stopped and cleaned up
+    // frameBuffer shared_ptr will clean itself up automatically
+}
+
+// --- INITIALIZE ---
+bool CameraInterface::initialize(const std::string &device, int width, int height, int fps)
+{
+    if (isInitialized.load())
+    {
+        LOG_WARN("CameraInterface already initialized.");
+        return false;
+    }
+
+    devicePath = device;
+    frameWidth = width;
+    frameHeight = height;
+    targetFPS = fps;
+    cameraProcess = nullptr; // Ensure it's null before starting
+    cameraCommand = "";      // Ensure it's empty before building
+
+    // --- BUILD THE rpicam-vid COMMAND ---
+    // --inline: Embeds JPEG headers in each frame for easier decoding
+    // --timeout 0: Run indefinitely
+    // --nopreview: Suppress on-screen preview
+    // --codec mjpeg: Output Motion JPEG stream
+    // --width/--height/--framerate: Set capture parameters
+    // --output - : Output to stdout (which we will read)
+    std::ostringstream cmdStream;
+    cmdStream << "rpicam-vid --inline --timeout 0 --nopreview";
+    cmdStream << " --codec mjpeg"; // MJPEG is good for streaming and OpenCV decoding
+    cmdStream << " --width " << frameWidth;
+    cmdStream << " --height " << frameHeight;
+    cmdStream << " --framerate " << targetFPS;
+    cmdStream << " --output -"; // Output to stdout
+
+    cameraCommand = cmdStream.str();
+    LOG_INFO("CameraInterface: Prepared command: " << cameraCommand);
+
+    // Test if rpicam-vid command exists (optional but good practice)
+    // You could run 'which rpicam-vid' or try opening the process and checking.
+
+    isInitialized.store(true);
+    LOG_INFO("CameraInterface: Initialization marked as successful.");
+    return true;
+}
+
+// --- START CAPTURE ---
+bool CameraInterface::startCapture()
+{
+    if (!isInitialized.load())
+    {
+        LOG_ERROR("CameraInterface not initialized. Cannot start capture.");
+        return false;
+    }
+    if (isCapturing.load())
+    {
+        LOG_WARN("CameraInterface capture already started.");
+        return false;
+    }
+
+    stopCaptureFlag.store(false);
+
+    // --- START THE rpicam-vid PROCESS ---
+    LOG_DEBUG("CameraInterface: Attempting to start rpicam-vid process...");
+    cameraProcess = popen(cameraCommand.c_str(), "r");
+    if (!cameraProcess)
+    {
+        perror("CameraInterface: Failed to start rpicam-vid process");
+        LOG_ERROR("CameraInterface: Failed to start rpicam-vid process: " << strerror(errno));
+        isInitialized.store(false); // Mark as failed to initialize properly
+        return false;
+    }
+
+    isCapturing.store(true);
+    captureThread = std::thread(&CameraInterface::captureLoop, this);
+
+    LOG_INFO("CameraInterface: rpicam-vid process started successfully.");
+    return true;
+}
+
+// --- STOP CAPTURE ---
+void CameraInterface::stopCapture()
+{
+    LOG_DEBUG("CameraInterface: stopCapture() called.");
+    if (isCapturing.load())
+    {
+        LOG_INFO("CameraInterface: Signaling capture thread to stop...");
+        stopCaptureFlag.store(true);
+        if (captureThread.joinable())
+        {
+            LOG_DEBUG("CameraInterface: Joining capture thread...");
+            captureThread.join();
+            LOG_INFO("CameraInterface: Capture thread joined.");
+        }
+        isCapturing.store(false);
+        LOG_INFO("CameraInterface: Capture state marked as stopped.");
+    }
+
+    // --- CLEAN UP THE SUBPROCESS ---
+    if (cameraProcess)
+    {
+        LOG_DEBUG("CameraInterface: Closing rpicam-vid process...");
+        int result = pclose(cameraProcess);
+        cameraProcess = nullptr;
+        if (result == -1)
+        {
+            perror("CameraInterface: Error closing rpicam-vid process");
+            LOG_ERROR("CameraInterface: Error closing rpicam-vid process: " << strerror(errno));
+        }
+        else
+        {
+            LOG_INFO("CameraInterface: rpicam-vid process closed (exit code: " << result << ").");
+        }
+    }
+    LOG_DEBUG("CameraInterface: stopCapture() completed.");
+}
+
+// --- IS RUNNING ---
+bool CameraInterface::isRunning() const
+{
+    bool running = isInitialized.load() && isCapturing.load();
+    LOG_VERBOSE("CameraInterface: isRunning() returning " << (running ? "true" : "false"));
+    return running;
+}
+
+// --- CAPTURE LOOP (PRIVATE) ---
+void CameraInterface::captureLoop()
+{
+    LOG_INFO("CameraInterface: captureLoop thread started.");
+
+    // Define buffer and size INSIDE the function scope where they are used.
+    // Adjust BUFFER_SIZE if needed based on expected frame sizes.
+    const size_t BUFFER_SIZE = 1024 * 1024; // 1MB buffer
+    std::vector<uint8_t> buffer(BUFFER_SIZE);
+    std::vector<uint8_t> jpegData; // To accumulate JPEG data
+
+    // A simple state machine to find JPEG SOI (0xFFD8) and EOI (0xFFD9)
+    enum class JpegState
+    {
+        FIND_SOI,
+        ACCUMULATE,
+        FOUND_EOI
+    };
+    JpegState state = JpegState::FIND_SOI;
+    const uint8_t SOI_MARKER[] = {0xFF, 0xD8};
+    const uint8_t EOI_MARKER[] = {0xFF, 0xD9};
+
+    // Reset previous_byte at the start of the loop
+    previous_byte = 0;
+
+    while (!stopCaptureFlag.load())
+    {
+        LOG_VERBOSE("CameraInterface: captureLoop iteration started.");
+
+        // --- READ DATA FROM rpicam-vid ---
+        // fread returns number of items read, not bytes necessarily if size > 1
+        // Using size=1, count=BUFFER_SIZE is safer for byte streams.
+        size_t bytesRead = fread(buffer.data(), sizeof(uint8_t), BUFFER_SIZE, cameraProcess);
+
+        if (bytesRead == 0)
+        {
+            if (feof(cameraProcess))
+            {
+                LOG_WARN("CameraInterface: rpicam-vid stream ended (EOF).");
+                break; // Exit loop if stream ends
+            }
+            if (ferror(cameraProcess))
+            {
+                LOG_ERROR("CameraInterface: Error reading from rpicam-vid stream.");
+                // Handle read error
+                clearerr(cameraProcess); // Clear error flag and try again
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            }
+            // If bytesRead is 0 but no error/EOF, just try again quickly
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+        LOG_VERBOSE("CameraInterface: Read " << bytesRead << " bytes from rpicam-vid.");
+
+        // --- PROCESS THE READ DATA TO EXTRACT JPEG FRAMES ---
+        for (size_t i = 0; i < bytesRead; ++i)
+        {
+            uint8_t byte = buffer[i];
+
+            switch (state)
+            {
+            case JpegState::FIND_SOI:
+                LOG_VERBOSE("CameraInterface: State FIND_SOI");
+                // Look for the start of a JPEG image (0xFFD8)
+                if (previous_byte == SOI_MARKER[0] && byte == SOI_MARKER[1])
+                {
+                    // Found SOI, start accumulating
+                    LOG_DEBUG("CameraInterface: JPEG SOI found.");
+                    jpegData.clear(); // Clear any partial data
+                    jpegData.push_back(SOI_MARKER[0]);
+                    jpegData.push_back(SOI_MARKER[1]);
+                    state = JpegState::ACCUMULATE;
+                }
+                // Keep the last byte to check for SOI in next iteration
+                previous_byte = byte;
+                break;
+
+            case JpegState::ACCUMULATE:
+                LOG_VERBOSE("CameraInterface: State ACCUMULATE");
+                jpegData.push_back(byte);
+                // Check if the last two bytes are EOI (0xFFD9)
+                if (jpegData.size() >= 2 &&
+                    jpegData[jpegData.size() - 2] == EOI_MARKER[0] &&
+                    jpegData[jpegData.size() - 1] == EOI_MARKER[1])
+                {
+                    LOG_DEBUG("CameraInterface: JPEG EOI found. Frame size: " << jpegData.size() << " bytes.");
+                    state = JpegState::FOUND_EOI;
+                }
+                break;
+
+            case JpegState::FOUND_EOI:
+                LOG_DEBUG("CameraInterface: Complete JPEG frame found (size: " << jpegData.size() << " bytes).");
+                // We have a complete JPEG in jpegData
+                {
+                    // --- DECODE JPEG TO cv::Mat ---
+                    // Create a cv::Mat header for the JPEG data
+                    cv::Mat jpegMat(1, jpegData.size(), CV_8UC1, jpegData.data());
+                    // Use cv::imdecode to decode the JPEG data into a BGR Mat
+                    cv::Mat frame = cv::imdecode(jpegMat, cv::IMREAD_COLOR);
+
+                    if (frame.empty())
+                    {
+                        LOG_WARN("CameraInterface: Failed to decode JPEG frame (size: " << jpegData.size() << " bytes).");
+                    }
+                    else
+                    {
+                        LOG_DEBUG("CameraInterface: Decoded frame (size: " << frame.cols << "x" << frame.rows << ").");
+                        // --- STORE THE DECODED FRAME IN THE BUFFER ---
+                        frameBuffer->putFrame(frame);
+                        LOG_INFO("CameraInterface: Frame put into FrameBuffer.");
+                    }
+                }
+                // Reset state and buffer for the next frame
+                jpegData.clear();
+                state = JpegState::FIND_SOI;
+                // Push the current byte back to start checking for next SOI
+                previous_byte = byte;
+                break;
+            }
+        }
+
+        // Small sleep to prevent busy-waiting if reading is very fast
+        // The blocking nature of fread should mostly prevent this.
+        // std::this_thread::sleep_for(std::chrono::microseconds(100));
+    } // End while loop
+
+    LOG_INFO("CameraInterface: captureLoop thread exiting.");
+}// src/vision/camera_interface.h
+#ifndef CAMERA_INTERFACE_H
+#define CAMERA_INTERFACE_H
+
+#include <opencv2/opencv.hpp>
+#include <string>
+#include <memory>
+#include <atomic>
+#include <thread>
+// #include <opencv2/videoio.hpp> // Remove or comment out, no longer using cv::VideoCapture
+#include <cstdio>         // For FILE*, popen, pclose
+#include <memory>         // For std::unique_ptr
+#include "frame_buffer.h" // Include the buffer header
+
+class CameraInterface
+{
+public:
+    CameraInterface();
+    ~CameraInterface(); // Important for cleanup
+
+    // Initialize the camera with specified parameters
+    // Note: Some parameters like FPS might be set via rpicam-vid arguments
+    bool initialize(const std::string &device = "/base/soc/i2c0mux/i2c@1/ov5647@36", // Use libcamera ID if known, or let rpicam-vid find it
+                    int width = 640, int height = 480, int fps = 20);
+
+    // Start capturing frames in a background thread
+    bool startCapture();
+
+    // Stop capturing frames
+    void stopCapture();
+
+    // Check if the camera is initialized and capturing
+    bool isRunning() const;
+
+    // Get the shared frame buffer
+    std::shared_ptr<FrameBuffer> getFrameBuffer() const { return frameBuffer; }
+
+private:
+    std::string devicePath; // Might be used for rpicam-vid arguments or logging
+    int frameWidth;
+    int frameHeight;
+    int targetFPS;
+
+    // --- CHANGED: Use FILE* for subprocess ---
+    FILE *cameraProcess;       // Handle for the rpicam-vid process
+    std::string cameraCommand; // The command used to start rpicam-vid
+
+    std::atomic<bool> isInitialized;
+    std::atomic<bool> isCapturing;
+    std::thread captureThread;
+    std::atomic<bool> stopCaptureFlag;
+
+    std::shared_ptr<FrameBuffer> frameBuffer;
+
+    // --- ADD THIS LINE: Member variable for JPEG SOI detection ---
+    uint8_t previous_byte; // Used in the state machine to find JPEG Start Of Image marker
+    // --- END OF ADDITION ---
+
+    // Function run by the capture thread
+    void captureLoop();
+};
+
+#endif // CAMERA_INTERFACE_H// src/vision/color_detector.cpp
+// Implementation of ColorDetector
+
+#include "color_detector.h"
+#include <iostream> // For optional debugging prints
+
+ColorDetector::ColorDetector()
+    : minAreaThreshold_(100.0), minAspectRatio_(0.3f), maxAspectRatio_(3.0f),
+      minSolidity_(0.5f), minExtent_(0.2f)
+{
+    // Default HSV ranges (from previous ImageProcessor logic)
+    // Red HSV (wraps around 0/180)
+    redLower1_ = cv::Scalar(0, 100, 100);
+    redUpper1_ = cv::Scalar(10, 255, 255);
+    redLower2_ = cv::Scalar(170, 100, 100);
+    redUpper2_ = cv::Scalar(180, 255, 255);
+    // Green HSV
+    greenLower_ = cv::Scalar(40, 50, 50);
+    greenUpper_ = cv::Scalar(80, 255, 255);
+
+    // Pre-create morphological kernel
+    morphKernel_ = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
+}
+
+void ColorDetector::setRedHSVRange(cv::Scalar lower1, cv::Scalar upper1, cv::Scalar lower2, cv::Scalar upper2)
+{
+    redLower1_ = lower1;
+    redUpper1_ = upper1;
+    redLower2_ = lower2;
+    redUpper2_ = upper2;
+}
+
+void ColorDetector::setGreenHSVRange(cv::Scalar lower, cv::Scalar upper)
+{
+    greenLower_ = lower;
+    greenUpper_ = upper;
+}
+
+bool ColorDetector::detectRedSign(const cv::Mat &hsvFrame, cv::Point &centroid)
+{
+    centroid = cv::Point(-1, -1); // Initialize to invalid
+
+    // --- Detect Red ---
+    cv::Mat redMask1, redMask2, redMask;
+    cv::inRange(hsvFrame, redLower1_, redUpper1_, redMask1);
+    cv::inRange(hsvFrame, redLower2_, redUpper2_, redMask2);
+    cv::bitwise_or(redMask1, redMask2, redMask);
+
+    // Noise reduction
+    cv::morphologyEx(redMask, redMask, cv::MORPH_OPEN, morphKernel_);
+    cv::morphologyEx(redMask, redMask, cv::MORPH_CLOSE, morphKernel_);
+    cv::morphologyEx(redMask, redMask, cv::MORPH_DILATE, morphKernel_); // Slight dilation
+
+    // Find contours
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(redMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    // Find the best red contour (largest valid one)
+    double bestArea = 0;
+    int bestIndex = -1;
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+        if (filterContour(contours[i], hsvFrame))
+        {
+            double area = cv::contourArea(contours[i]);
+            if (area > bestArea)
+            {
+                bestArea = area;
+                bestIndex = i;
+            }
+        }
+    }
+
+    if (bestIndex != -1)
+    {
+        // Calculate centroid using moments
+        cv::Moments m = cv::moments(contours[bestIndex]);
+        if (m.m00 != 0)
+        {
+            centroid.x = static_cast<int>(m.m10 / m.m00);
+            centroid.y = static_cast<int>(m.m01 / m.m00);
+        }
+        return true; // Valid red sign found
+    }
+    return false; // No valid red sign found
+}
+
+bool ColorDetector::detectGreenSign(const cv::Mat &hsvFrame, cv::Point &centroid)
+{
+    centroid = cv::Point(-1, -1); // Initialize to invalid
+
+    // --- Detect Green ---
+    cv::Mat greenMask;
+    cv::inRange(hsvFrame, greenLower_, greenUpper_, greenMask);
+
+    // Noise reduction
+    cv::morphologyEx(greenMask, greenMask, cv::MORPH_OPEN, morphKernel_);
+    cv::morphologyEx(greenMask, greenMask, cv::MORPH_CLOSE, morphKernel_);
+    cv::morphologyEx(greenMask, greenMask, cv::MORPH_DILATE, morphKernel_); // Slight dilation
+
+    // Find contours
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(greenMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    // Find the best green contour (largest valid one)
+    double bestArea = 0;
+    int bestIndex = -1;
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+        if (filterContour(contours[i], hsvFrame))
+        {
+            double area = cv::contourArea(contours[i]);
+            if (area > bestArea)
+            {
+                bestArea = area;
+                bestIndex = i;
+            }
+        }
+    }
+
+    if (bestIndex != -1)
+    {
+        // Calculate centroid using moments
+        cv::Moments m = cv::moments(contours[bestIndex]);
+        if (m.m00 != 0)
+        {
+            centroid.x = static_cast<int>(m.m10 / m.m00);
+            centroid.y = static_cast<int>(m.m01 / m.m00);
+        }
+        return true; // Valid green sign found
+    }
+    return false; // No valid green sign found
+}
+
+bool ColorDetector::filterContour(const std::vector<cv::Point> &contour, const cv::Mat &hsvFrame)
+{
+    (void)hsvFrame;
+    double area = cv::contourArea(contour);
+    if (area < minAreaThreshold_)
+        return false;
+
+    // 1. Aspect Ratio (closer to 1 for circle/square)
+    cv::Rect boundingRect = cv::boundingRect(contour);
+    float aspectRatio = static_cast<float>(boundingRect.width) / boundingRect.height;
+    if (aspectRatio < minAspectRatio_ || aspectRatio > maxAspectRatio_)
+        return false;
+
+    // 2. Extent (Ratio of contour area to bounding rectangle area)
+    double rectArea = boundingRect.area();
+    double extent = area / rectArea;
+    if (extent < minExtent_)
+        return false;
+
+    // 3. Solidity (Ratio of contour area to its convex hull area)
+    std::vector<cv::Point> hull;
+    cv::convexHull(contour, hull);
+    double hullArea = cv::contourArea(hull);
+    // Avoid division by zero, though hullArea should be >= area
+    if (hullArea > 0)
+    {
+        double solidity = area / hullArea;
+        if (solidity < minSolidity_)
+            return false;
+    }
+    else if (minSolidity_ > 0)
+    {
+        return false; // If hullArea is 0 but minSolidity > 0, reject
+    }
+
+    return true; // Passed all filters
+}// src/vision/color_detector.h
+// Dedicated class for detecting Red/Green traffic sign pillars
+
+#ifndef COLOR_DETECTOR_H
+#define COLOR_DETECTOR_H
+
+#include <opencv2/opencv.hpp>
+
+class ColorDetector
+{
+public:
+    ColorDetector();
+    ~ColorDetector() = default;
+
+    // Configure HSV ranges for Red (wraps around in HSV)
+    void setRedHSVRange(cv::Scalar lower1, cv::Scalar upper1, cv::Scalar lower2, cv::Scalar upper2);
+    // Configure HSV range for Green
+    void setGreenHSVRange(cv::Scalar lower, cv::Scalar upper);
+
+    // Detect Red sign in an HSV image
+    // Returns true if a valid red sign is found
+    // centroid: Output, the center point of the detected sign
+    bool detectRedSign(const cv::Mat &hsvFrame, cv::Point &centroid);
+
+    // Detect Green sign in an HSV image
+    // Returns true if a valid green sign is found
+    // centroid: Output, the center point of the detected sign
+    bool detectGreenSign(const cv::Mat &hsvFrame, cv::Point &centroid);
+
+    // --- Advanced Filtering Parameters (can be tuned) ---
+    void setMinAreaThreshold(double area) { minAreaThreshold_ = area; }
+    void setMinAspectRatio(float ratio) { minAspectRatio_ = ratio; }
+    void setMaxAspectRatio(float ratio) { maxAspectRatio_ = ratio; }
+    void setMinSolidity(float solidity) { minSolidity_ = solidity; }
+    void setMinExtent(float extent) { minExtent_ = extent; }
+
+private:
+    // HSV ranges for Red (two parts due to wrap-around)
+    cv::Scalar redLower1_, redUpper1_;
+    cv::Scalar redLower2_, redUpper2_;
+    // HSV range for Green
+    cv::Scalar greenLower_, greenUpper_;
+
+    // --- Filtering Parameters ---
+    double minAreaThreshold_; // Minimum contour area
+    float minAspectRatio_;    // Width/Height min
+    float maxAspectRatio_;    // Width/Height max
+    float minSolidity_;       // Area / Convex Hull Area min
+    float minExtent_;         // Area / Bounding Rect Area min
+
+    // Internal helper for contour filtering
+    bool filterContour(const std::vector<cv::Point> &contour, const cv::Mat &hsvFrame);
+
+    // Morphological kernel (reused)
+    cv::Mat morphKernel_;
+};
+
+#endif // COLOR_DETECTOR_H// src/vision/edge_detector.cpp
+// Implementation of EdgeDetector
+
+#include "edge_detector.h"
+#include <cmath> // For M_PI, atan2, fabs
+// #include <iostream> // Optional for debugging
+
+EdgeDetector::EdgeDetector()
+    : cannyLowThreshold_(50), cannyHighThreshold_(150),
+      houghRho_(1.0), houghTheta_(CV_PI / 180),
+      houghThreshold_(50), houghMinLineLength_(30.0), houghMaxLineGap_(10.0),
+      useMorphology_(true)
+{
+    // Pre-create morphological kernel
+    morphKernel_ = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+}
+
+void EdgeDetector::preprocessFrame(const cv::Mat &inputFrame, cv::Mat &outputGray)
+{
+    if (inputFrame.channels() == 3)
+    {
+        cv::cvtColor(inputFrame, outputGray, cv::COLOR_BGR2GRAY);
+    }
+    else
+    {
+        outputGray = inputFrame;
+    }
+    // Apply Gaussian blur to reduce noise
+    cv::GaussianBlur(outputGray, outputGray, cv::Size(5, 5), 0);
+}
+
+void EdgeDetector::detectEdgesAndLines(const cv::Mat &frame, std::vector<cv::Vec4i> &lines)
+{
+    lines.clear(); // Ensure output vector is clean
+
+    if (frame.empty())
+    {
+        return; // Nothing to process
+    }
+
+    cv::Mat grayFrame;
+    preprocessFrame(frame, grayFrame);
+
+    // --- Use Canny Edge Detection ---
+    cv::Mat edges;
+    cv::Canny(grayFrame, edges, cannyLowThreshold_, cannyHighThreshold_);
+
+    // --- Use Morphological Operations to strengthen lines (optional) ---
+    if (useMorphology_)
+    {
+        cv::morphologyEx(edges, edges, cv::MORPH_CLOSE, morphKernel_);
+        // cv::morphologyEx(edges, edges, cv::MORPH_DILATE, morphKernel_); // Optional: thicken lines
+    }
+
+    // --- Use Hough Line Transform to detect lines ---
+    cv::HoughLinesP(edges, lines, houghRho_, houghTheta_, houghThreshold_,
+                    houghMinLineLength_, houghMaxLineGap_);
+}
+
+void EdgeDetector::findAverageEdgePositions(const std::vector<cv::Vec4i> &lines, int frameWidth, float &avgLeftEdgeX, float &avgRightEdgeX)
+{
+    avgLeftEdgeX = -1.0f; // Indicate not found
+    avgRightEdgeX = -1.0f;
+
+    float leftEdgeSumX = 0.0f;
+    int leftEdgeCount = 0;
+    float rightEdgeSumX = 0.0f;
+    int rightEdgeCount = 0;
+
+    const float frameCenterX = static_cast<float>(frameWidth) / 2.0f;
+
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+        cv::Vec4i l = lines[i];
+        cv::Point pt1(l[0], l[1]);
+        cv::Point pt2(l[2], l[3]);
+
+        // Calculate angle of the line
+        double angle = atan2(pt2.y - pt1.y, pt2.x - pt1.x) * 180.0 / CV_PI;
+
+        // Filter for near-vertical lines (allowing some tilt)
+        // Lines pointing upwards (left edge) or downwards (right edge) on the track
+        // Adjust angle thresholds if needed.
+        if ((angle > 70 && angle < 110) || (angle > -110 && angle < -70))
+        {
+            float lineCenterX = (l[0] + l[2]) / 2.0f;
+            // float lineCenterY = (l[1] + l[3]) / 2.0f; // Useful for weighting if needed
+
+            // Separate based on x-coordinate relative to frame center
+            if (lineCenterX < frameCenterX)
+            {
+                // Potentially a left edge line
+                leftEdgeSumX += lineCenterX;
+                leftEdgeCount++;
+            }
+            else
+            {
+                // Potentially a right edge line
+                rightEdgeSumX += lineCenterX;
+                rightEdgeCount++;
+            }
+            // Optional: Draw lines for debugging (requires access to the frame Mat)
+            // cv::line(frame, pt1, pt2, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+        }
+    }
+
+    // Calculate average X positions
+    if (leftEdgeCount > 0)
+    {
+        avgLeftEdgeX = leftEdgeSumX / leftEdgeCount;
+    }
+    if (rightEdgeCount > 0)
+    {
+        avgRightEdgeX = rightEdgeSumX / rightEdgeCount;
+    }
+}// src/vision/edge_detector.h
+// Dedicated class for detecting track edges using Canny + HoughLinesP
+
+#ifndef EDGE_DETECTOR_H
+#define EDGE_DETECTOR_H
+
+#include <opencv2/opencv.hpp>
+#include <vector> // For std::vector<cv::Vec4i>
+
+class EdgeDetector
+{
+public:
+    EdgeDetector();
+    ~EdgeDetector() = default;
+
+    // --- Detection Parameters ---
+    void setCannyThresholds(int low, int high)
+    {
+        cannyLowThreshold_ = low;
+        cannyHighThreshold_ = high;
+    }
+    void setHoughParams(double rho, double theta, int threshold, double minLineLength, double maxLineGap)
+    {
+        houghRho_ = rho;
+        houghTheta_ = theta;
+        houghThreshold_ = threshold;
+        houghMinLineLength_ = minLineLength;
+        houghMaxLineGap_ = maxLineGap;
+    }
+    void setMorphologyEnabled(bool enable) { useMorphology_ = enable; }
+
+    // Detect edges and lines in a BGR or Grayscale frame
+    // lines: Output, vector of detected lines (cv::Vec4i: x1, y1, x2, y2)
+    void detectEdgesAndLines(const cv::Mat &frame, std::vector<cv::Vec4i> &lines);
+
+    // Analyze detected lines to find average left and right edge X positions
+    // frameWidth: Width of the input frame (needed for center calculation)
+    // avgLeftEdgeX, avgRightEdgeX: Output, average X positions (-1.0 if not found)
+    void findAverageEdgePositions(const std::vector<cv::Vec4i> &lines, int frameWidth, float &avgLeftEdgeX, float &avgRightEdgeX);
+
+private:
+    // --- Canny Parameters ---
+    int cannyLowThreshold_;
+    int cannyHighThreshold_;
+
+    // --- HoughLinesP Parameters ---
+    double houghRho_;
+    double houghTheta_;
+    int houghThreshold_;
+    double houghMinLineLength_;
+    double houghMaxLineGap_;
+
+    // --- Morphology ---
+    bool useMorphology_;
+    cv::Mat morphKernel_;
+
+    // --- Internal Helpers ---
+    void preprocessFrame(const cv::Mat &inputFrame, cv::Mat &outputGray);
+};
+
+#endif // EDGE_DETECTOR_H// vision/frame_buffer.cpp
+// Implementation of FrameBuffer
+
+#include "frame_buffer.h"
+#include "../utils/logger.h" // For logging if needed
+FrameBuffer::FrameBuffer()
+{
+    latestFrame = cv::Mat();
+    LOG_DEBUG("FrameBuffer constructed.");
+    // Constructor - atomic flag is initialized in the member initializer list
+}
+
+void FrameBuffer::putFrame(const cv::Mat &frame)
+{
+    if (frame.empty())
+    {
+        LOG_WARN("putFrame called with an empty frame. Ignoring.");
+        return; // Don't store empty frames
+    }
+    std::lock_guard<std::mutex> lock(bufferMutex);
+    latestFrame = frame;                                 // Store a copy
+    newFrameFlag.store(true, std::memory_order_release); // Signal new frame is available
+    LOG_DEBUG("putFrame: Stored new frame (size: " << frame.cols << "x" << frame.rows << "). Flag set.");
+}
+
+bool FrameBuffer::getFrame(cv::Mat &frame)
+{
+    std::lock_guard<std::mutex> lock(bufferMutex);
+    if (newFrameFlag.load(std::memory_order_acquire))
+    {
+        frame = latestFrame;                                  // Provide a copy to the consumer
+        newFrameFlag.store(false, std::memory_order_release); // Mark frame as consumed
+        LOG_DEBUG("getFrame: Retrieved frame (size: " << frame.cols << "x" << frame.rows << "). Flag cleared.");
+        return true;
+    }
+    return false; // No new frame was available
+}
+
+bool FrameBuffer::hasNewFrame() const
+{
+    // Quick check without locking the mutex for the frame data
+    bool available = newFrameFlag.load(std::memory_order_acquire);
+    // LOG_VERBOSE("hasNewFrame: " << (available ? "true" : "false")); // Very frequent
+    return available;
+}// vision/frame_buffer.h
+// A simple thread-safe buffer to hold the latest frame for processing
+
+#ifndef FRAME_BUFFER_H
+#define FRAME_BUFFER_H
+
+#include <opencv2/opencv.hpp>
+#include <mutex>
+#include <atomic>
+
+class FrameBuffer
+{
+public:
+    FrameBuffer();
+    ~FrameBuffer() = default;
+
+    // Put a new frame into the buffer (Producer)
+    // Uses move semantics for efficiency if possible, otherwise copies
+    void putFrame(const cv::Mat &frame);
+
+    // Get the latest frame from the buffer (Consumer)
+    // Returns true if a frame was available
+    // 'frame' will contain a copy of the latest frame
+    bool getFrame(cv::Mat &frame);
+
+    // Check if a new frame is available
+    bool hasNewFrame() const;
+
+private:
+    mutable std::mutex bufferMutex; // Protects access to the frame
+    cv::Mat latestFrame;
+    std::atomic<bool> newFrameFlag{false}; // Atomic flag for quick check
+};
+
+#endif // FRAME_BUFFER_H// src/vision/image_processor.cpp
+// Implementation of ImageProcessor (Coordinator using modular detectors)
+
+#include "image_processor.h"
+#include <iostream>
+#include <cmath>     // For round, atan2, sqrt etc.
+#include <algorithm> // For std::max, std::min if needed
+// --- INCLUDES FOR NEW MODULES ---
+#include "color_detector.h"
+#include "edge_detector.h"
+#include "../utils/logger.h" // Include the logger
+// --- END OF INCLUDES ---
+
+ImageProcessor::ImageProcessor()
+    : isInitialized(false), isProcessing(false), stopProcessingFlag(false), newSnapshotAvailable(false)
+{
+    // Define initial ROI (e.g., top half of the image)
+    // This will be adjusted based on the actual frame size in processFrame
+    roi = cv::Rect(0, 0, 640, 240);
+
+    // --- INITIALIZE DETECTORS WITH DEFAULT PARAMETERS ---
+    // Parameters can be tuned here or via a configuration mechanism later
+    // ColorDetector uses defaults set in its constructor
+    // Example of setting custom HSV ranges if needed:
+    // colorDetector_.setRedHSVRange(cv::Scalar(0, 120, 120), cv::Scalar(5, 255, 255),
+    //                               cv::Scalar(175, 120, 120), cv::Scalar(180, 255, 255));
+    // colorDetector_.setGreenHSVRange(cv::Scalar(45, 60, 60), cv::Scalar(75, 255, 255));
+
+    // EdgeDetector uses defaults set in its constructor
+    // Example of setting custom Canny/Hough parameters if needed:
+    // edgeDetector_.setCannyThresholds(40, 120);
+    // edgeDetector_.setHoughParams(1.0, CV_PI / 180, 40, 25.0, 8.0);
+    // --- END OF INITIALIZATION ---
+}
+
+ImageProcessor::~ImageProcessor()
+{
+    stopProcessing();
+}
+
+bool ImageProcessor::initialize(std::shared_ptr<FrameBuffer> frameBuf)
+{
+    if (isInitialized)
+    {
+        std::cerr << "ImageProcessor already initialized." << std::endl;
+        return false;
+    }
+    if (!frameBuf)
+    {
+        std::cerr << "Invalid frame buffer provided." << std::endl;
+        return false;
+    }
+
+    frameBufferSource = frameBuf;
+    isInitialized = true;
+    std::cout << "ImageProcessor initialized with frame buffer." << std::endl;
+    return true;
+}
+
+bool ImageProcessor::startProcessing()
+{
+    if (!isInitialized)
+    {
+        std::cerr << "ImageProcessor not initialized. Cannot start processing." << std::endl;
+        return false;
+    }
+    if (isProcessing)
+    {
+        std::cerr << "Image processing already started." << std::endl;
+        return false;
+    }
+
+    stopProcessingFlag = false;
+    isProcessing = true;
+    processingThread = std::thread(&ImageProcessor::processingLoop, this);
+
+    std::cout << "Image processing started." << std::endl;
+    return true;
+}
+
+void ImageProcessor::stopProcessing()
+{
+    if (isProcessing)
+    {
+        stopProcessingFlag = true;
+        if (processingThread.joinable())
+        {
+            processingThread.join();
+        }
+        isProcessing = false;
+        std::cout << "Image processing stopped." << std::endl;
+    }
+}
+
+bool ImageProcessor::getLatestSnapshot(VisionSnapshot &snapshot)
+{
+    if (!isInitialized)
+    {
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(snapshotMutex);
+    if (newSnapshotAvailable)
+    {
+        snapshot = latestSnapshot;
+        newSnapshotAvailable = false;
+        return true;
+    }
+    return false; // No new snapshot available
+}
+
+bool ImageProcessor::isRunning() const
+{
+    return isInitialized && isProcessing;
+}
+
+void ImageProcessor::processingLoop()
+{
+    cv::Mat frame;
+    VisionSnapshot currentSnapshot;
+    int wait_counter = 0; // Counter for wait messages
+
+    while (!stopProcessingFlag)
+    {
+        LOG_VERBOSE("ImageProcessor: processingLoop iteration started.");
+        // Get the latest frame from the frame buffer
+        // Check if a new frame is available first
+        if (frameBufferSource)
+        {
+            LOG_DEBUG("ImageProcessor: frameBufferSource->hasNewFrame() returned true.");
+            // Attempt to get the frame
+            if (frameBufferSource->getFrame(frame))
+            {
+                LOG_INFO("ImageProcessor: Successfully got a frame from FrameBuffer (size: " << frame.cols << "x" << frame.rows << ").");
+                // Process the frame
+                processFrame(frame, currentSnapshot);
+                LOG_INFO("ImageProcessor: Completed processFrame call.");
+
+                // Store the processed snapshot
+                {
+                    std::lock_guard<std::mutex> lock(snapshotMutex);
+                    latestSnapshot = currentSnapshot;
+                    newSnapshotAvailable = true;
+                }
+                LOG_INFO("ImageProcessor: Updated latestSnapshot and signaled new data.");
+                // Reset wait counter as we processed a frame
+                wait_counter = 0;
+            }
+            // else
+            // {
+            //     LOG_WARN("ImageProcessor: hasNewFrame() was true, but getFrame() failed. Possible race condition or buffer issue.");
+            // }
+        }
+        else
+        {
+            // No new frame is available, handle waiting
+            // Small sleep to prevent busy-waiting
+            wait_counter++;
+            if (wait_counter % 500 == 0) // Log every 500 cycles (~1 second at 2ms sleep)
+            {
+                LOG_INFO("ImageProcessor: Waiting for new frame in processingLoop (cycle " << wait_counter << ").");
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        }
+        LOG_VERBOSE("ImageProcessor: processingLoop iteration ended.");
+    } // End while loop
+    LOG_INFO("ImageProcessor: processingLoop thread exiting.");
+}
+void ImageProcessor::processFrame(const cv::Mat &frame, VisionSnapshot &outputSnapshot)
+{
+    LOG_DEBUG("ImageProcessor::processFrame called.");
+    // std::cout << "ImageProcessor::processFrame called." << std::endl; // Verbose
+    // Use LOG_DEBUG if logger is active
+    // Initialize output
+    outputSnapshot.signLeftDetected = false;
+    outputSnapshot.signRightDetected = false;
+    outputSnapshot.avgLeftEdgeX = -1.0f; // Indicate not found
+    outputSnapshot.avgRightEdgeX = -1.0f;
+
+    if (frame.empty())
+    {
+        // std::cerr << "ImageProcessor::processFrame received an empty frame." << std::endl; // Verbose
+        // Use LOG_WARN if logger is active
+        LOG_WARN("ImageProcessor::processFrame received an empty frame.");
+        return; // Nothing to process
+    }
+    // std::cout << "ImageProcessor::processFrame processing frame of size " << frame.cols << "x" << frame.rows << std::endl; // Verbose
+    // Use LOG_DEBUG if logger is active
+    LOG_DEBUG("ImageProcessor::processFrame processing frame of size " << frame.cols << "x" << frame.rows);
+
+    // Adjust ROI based on current frame size if needed
+    // Simple adjustment: top half. In a more complex scenario, this could be dynamic.
+    if (roi.width != frame.cols || roi.height != frame.rows / 2)
+    {
+        roi = cv::Rect(0, 0, frame.cols, frame.rows / 2);
+        // std::cout << "ImageProcessor: ROI adjusted to " << roi.width << "x" << roi.height << std::endl; // Verbose
+        // Use LOG_DEBUG if logger is active
+        LOG_DEBUG("ImageProcessor: ROI adjusted to " << roi.width << "x" << roi.height);
+    }
+
+    // Extract ROI
+    cv::Mat roiFrame = frame(roi);
+
+    // --- 1. Detect Traffic Signs using ColorDetector ---
+    // Convert ROI to HSV for color detection
+    cv::Mat hsvFrame;
+    cv::cvtColor(roiFrame, hsvFrame, cv::COLOR_BGR2HSV);
+
+    cv::Point leftCentroid, rightCentroid;
+    bool leftSignFound = colorDetector_.detectGreenSign(hsvFrame, leftCentroid);
+    bool rightSignFound = colorDetector_.detectRedSign(hsvFrame, rightCentroid);
+
+    outputSnapshot.signLeftDetected = leftSignFound;
+    outputSnapshot.signRightDetected = rightSignFound;
+    // Note: Centroids are relative to the ROI. If full-frame coordinates are needed later,
+    // adjust them by adding roi.x, roi.y. For now, they are sufficient for relative positioning logic.
+
+    // --- Optional: Resolve conflicts if both detected ---
+    // E.g., if centroids are very close, or one is much larger, prioritize.
+    // Define a minimum expected distance between signs (adjust based on testing)
+    const double minExpectedSignDistance = 50.0; // Example value in pixels
+
+    if (leftSignFound && rightSignFound)
+    {
+        double distance = cv::norm(leftCentroid - rightCentroid);
+        if (distance < minExpectedSignDistance)
+        {
+            // std::cerr << "ImageProcessor: Sign conflict detected (distance: " << distance << "). Resolving..." << std::endl; // Verbose
+            // Likely a false positive, choose the one with larger area or better solidity
+            // A more sophisticated method could be in ColorDetector itself.
+            // Simple heuristic: Prefer left sign (arbitrary, or based on last known state)
+            // For now, let's disable the right sign.
+            outputSnapshot.signRightDetected = false;
+            rightCentroid = cv::Point(-1, -1); // Invalidate centroid
+            // std::cerr << "ImageProcessor: Conflict resolved. Disabled right sign." << std::endl; // Verbose
+            // Use LOG_WARN/INFO if logger is active
+            LOG_WARN("ImageProcessor: Conflict resolved. Disabled right sign.");
+        }
+    }
+    // --- End of Sign Detection ---
+
+    // --- 2. Detect Track Edges using EdgeDetector ---
+    std::vector<cv::Vec4i> detectedLines;
+    edgeDetector_.detectEdgesAndLines(roiFrame, detectedLines);
+    edgeDetector_.findAverageEdgePositions(detectedLines, roiFrame.cols, outputSnapshot.avgLeftEdgeX, outputSnapshot.avgRightEdgeX);
+    // --- End of Edge Detection ---
+
+    // std::cout << "ImageProcessor::processFrame completed." << std::endl; // Verbose
+    // Use LOG_DEBUG if logger is active
+    LOG_DEBUG("ImageProcessor::processFrame completed.");
+}
+// --- REMOVED OLD MONOLITHIC detectSigns AND detectEdges FUNCTIONS ---
+// Their logic has been moved to ColorDetector and EdgeDetector respectively.
+// --- END OF REMOVAL ---// vision/image_processor.h
+// Core image processing logic
+
+#ifndef IMAGE_PROCESSOR_H
+#define IMAGE_PROCESSOR_H
+
+#include <opencv2/opencv.hpp>
+#include <memory>
+#include <atomic>
+#include <thread>
+#include <mutex>
+// #include "camera_interface.h"               // To get frames
+#include "frame_buffer.h"                    // Include the buffer header
+#include "../navigation/positional_memory.h" // For VisionSnapshot
+// --- ADD INCLUDES FOR NEW MODULES ---
+#include "color_detector.h"
+#include "edge_detector.h"
+// #include "roi_selector.h" // Future if needed
+class ImageProcessor
+{
+public:
+    ImageProcessor();
+    ~ImageProcessor();
+
+    // Initialize with a camera source
+    bool initialize(std::shared_ptr<FrameBuffer> frameBuf);
+
+    // Start processing frames in a background thread
+    bool startProcessing();
+
+    // Stop processing frames
+    void stopProcessing();
+
+    // Get the latest processed vision snapshot
+    bool getLatestSnapshot(VisionSnapshot &snapshot);
+
+    // Check if processing is active
+    bool isRunning() const;
+
+private:
+    // std::shared_ptr<CameraInterface> cameraSource;
+    std::shared_ptr<FrameBuffer> frameBufferSource;
+    std::atomic<bool> isInitialized;
+    std::atomic<bool> isProcessing;
+    std::thread processingThread;
+    std::atomic<bool> stopProcessingFlag;
+
+    // Synchronization for the latest snapshot
+    mutable std::mutex snapshotMutex;
+    VisionSnapshot latestSnapshot;
+    std::atomic<bool> newSnapshotAvailable;
+
+    // Processing parameters (could be moved to config)
+    cv::Rect roi; // Region of Interest for sign detection
+    ColorDetector colorDetector_;
+    EdgeDetector edgeDetector_;
+    // HSV ranges for Red and Green (from rules: RGB(238, 39, 55) and RGB(68, 214, 44))
+    // These will need tuning
+    cv::Scalar redLower1, redUpper1; // Red wraps around in HSV
+    cv::Scalar redLower2, redUpper2;
+    cv::Scalar greenLower, greenUpper;
+
+    // Function run by the processing thread
+    void processingLoop();
+
+    // Core processing functions
+    void processFrame(const cv::Mat &frame, VisionSnapshot &outputSnapshot);
+    // void detectSigns(const cv::Mat &hsvFrame, bool &leftSign, bool &rightSign, cv::Point &leftCentroid, cv::Point &rightCentroid);
+    // void detectEdges(const cv::Mat &frame, float &avgLeftEdgeX, float &avgRightEdgeX); // Simplified
+};
+
+#endif // IMAGE_PROCESSOR_Harman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle$ 
+

@@ -88,3 +88,43 @@ wro2025_vehicle/
 ├── videos/                          # Performance videos (for GitHub)
 ├── photos/                          # Vehicle/team photos (for GitHub)
 └── LICENSE                          # License file (if applicable, good practice)
+
+wro2025_vehicle_python/
+├── config/
+│   ├── __init__.py
+│   └── vehicle_config.py         # Constants (serial port, camera params, etc.)
+├── communication/
+│   ├── __init__.py
+│   └── serial_handler.py         # Python implementation using pyserial
+├── sensors/
+│   ├── __init__.py
+│   └── sensor_data.py            # Define SensorData/CompactSensorData classes/structs (using ctypes or dataclasses)
+├── vision/
+│   ├── __init__.py
+│   ├── camera_interface.py       # Manage rpicam-vid subprocess, capture JPEGs
+│   ├── frame_buffer.py           # Thread-safe queue for frames (e.g., queue.Queue)
+│   ├── image_processor.py        # Core image processing logic (ColorDetector, EdgeDetector classes)
+│   ├── color_detector.py         # Specific color detection logic
+│   ├── edge_detector.py          # Specific edge detection logic
+│   └── vision_snapshot.py        # Define VisionSnapshot dataclass
+├── navigation/
+│   ├── __init__.py
+│   ├── mission_state.py          # MissionPhase, ChallengeType enums, state management
+│   ├── lap_counter.py            # Lap counting logic
+│   ├── positional_memory.py      # Positional memory logic
+│   └── path_planner.py           # Path planning logic (Open/Obstacle)
+├── control/
+│   ├── __init__.py
+│   ├── path_planner.py           # (Might merge with navigation/path_planner.py or keep separate logic)
+│   └── trajectory_generator.py   # Trajectory generation logic
+├── actuators/
+│   ├── __init__.py
+│   └── vehicle_controller.py     # Interface to send commands via serial
+├── utils/
+│   ├── __init__.py
+│   ├── logger.py                 # Logging setup (can use Python's logging module)
+│   └── math_utils.py             # Math helper functions
+├── main.py                       # Main application loop, initializes modules, runs states
+├── requirements.txt              # List Python dependencies (opencv-python, pyserial, etc.)
+└── scripts/
+    └── run_vehicle.sh            # Optional script to run the application

@@ -1,0 +1,4 @@
+# requirements.txt
+opencv-python-headless # or opencv-python
+pyserial
+numpy

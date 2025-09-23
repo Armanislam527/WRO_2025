@@ -1,53 +1,115 @@
-Battery Pack (+) ---[Switch]---+---> To Buck Converter Input (+)
-                              |
-                              +---> To L298N VCC_MOT (+)
+Okay, let's clarify the wiring based on your `config.h` file. This assumes you are using an **Arduino Nano** as your main controller, as indicated by the pin numbers used (e.g., A0, A1, A4, A5).
 
-Battery Pack (-) --------------+---> To Buck Converter Input (-)
-                              |
-                              +---> To L298N GND_MOT (-)
-                              |
-                              +---> Main GND Bus/Rail
+Here is the crystal-clear wiring plan derived from your configuration:
 
-Buck Converter Output (+) ---> VCC_5V Bus/Rail
-Buck Converter Output (-) ---> Main GND Bus/Rail
+**1. Power Supply Connections (Essential First Step)**
 
-VCC_5V Bus/Rail --+--> Pi 5V Pins
-                  +--> Nano 5V Pin
-                  +--> MPU6050 VCC
-                  +--> Ultrasonic VCC (x4)
-                  +--> Servo VCC (Check current!)
-                  +--> Start Button Pull-Up (if external)
-                  +--> Capacitor (+) (x 3-4 near this point)
+*   **Battery Pack Positive (+)** -> **L298N VCC** (Motor Power Input)
+*   **Battery Pack Negative (-)** -> **L298N GND** (Motor Ground) **AND** -> **Arduino Nano GND** (Common Ground)
+*   **L298N 5V Output** (if used) -> **Arduino Nano Vin** (Optional, if L298N's onboard 5V regulator is used. If using a separate 5V regulator/buck converter for Nano/SENSORS, connect that 5V/GND to Nano's 5V/GND pins).
+*   **Important:** Ensure the grounds of your battery packs (motor and logic, if separate) are connected together.
 
-Main GND Bus/Rail --+--> Pi GND Pins
-                    +--> Nano GND Pin
-                    +--> MPU6050 GND
-                    +--> Ultrasonic GND (x4)
-                    +--> Servo GND
-                    +--> Start Button (Other leg)
-                    +--> L298N GND
-                    +--> Capacitor (-) (x all 10)
+**2. Ultrasonic Sensors**
 
-Nano Pin 2 <---[Push Button]---> GND (with internal pull-up)
+Each HC-SR04 sensor has four pins: VCC, Trig, Echo, GND.
 
-Nano Pins 0,1 <--> Pi GPIO 15,14 (UART - Check Logic Levels!)
+| Sensor Name | VCC Pin       | Trig Pin             | Echo Pin             | GND Pin        |
+| :---------- | :------------ | :------------------- | :------------------- | :------------- |
+| **Front**   | **5V** (Nano) | **D3** (Nano Pin 5)  | **D4** (Nano Pin 6)  | **GND** (Nano) |
+| **Right**   | **5V** (Nano) | **D5** (Nano Pin 11) | **D6** (Nano Pin 12) | **GND** (Nano) |
+| **Back**    | **5V** (Nano) | **D7** (Nano Pin 13) | **D8** (Nano Pin 14) | **GND** (Nano) |
+| **Left**    | **5V** (Nano) | **D9** (Nano Pin 15) | **D10** (Nano Pin 16)| **GND** (Nano) |
 
-Nano A4, A5 ---> MPU6050 SDA, SCL (Add pull-ups if needed)
+**3. L298N Motor Driver**
 
-Nano Pins 3,5,7,9 ---> Ultrasonic Trig 1,2,3,4
-Nano Pins 4,6,8,10 --> Ultrasonic Echo 1,2,3,4
+Connect the L298N to the Nano and the motors.
 
-Nano Pin 11 ---> Servo Signal
+| L298N Pin | Connection                     |
+| :-------- | :----------------------------- |
+| **ENA**   | **D12** (Nano Pin 19)          |
+| **IN1**   | **D13** (Nano Pin 17)          |
+| **IN2**   | **A0** (Nano Pin 23)           |
+| **IN3**   | **Not Connected** (Single Motor) |
+| **IN4**   | **Not Connected** (Single Motor) |
+| **ENB**   | **Not Connected** (Single Motor) |
+| **VCC**   | **+ve Battery Pack Terminal**  |
+| **GND**   | **-ve Battery Pack Terminal**  |
+| **5V**    | **(See Power Supply Note)**    |
+| **OUT1**  | **One Terminal of Rear Motor**|
+| **OUT2**  | **Other Terminal of Rear Motor** |
+| **5V/GND** (Logic Power) | **5V/GND from Nano's power source** |
 
-Nano Pins 12,13,A0 ---> L298N ENA, IN1, IN2
+**4. Servo Motor (Steering)**
 
-L298N OUT1, OUT2 ---> Drive Motor Terminals
+Typically, a servo has three wires: Power (Red/Brown), Ground (Black/Brown), Signal (Orange/Yellow/White).
 
-VCC_MOT (+/-) Bus/Rail --+--> L298N VCC_MOT/GND_MOT
-                         +--> Capacitor (+/-) (x 2-3 near L298N)
+| Servo Wire       | Connection             |
+| :--------------- | :--------------------- |
+| **Power (Red/Brown)** | **5V** (Nano or dedicated servo power) |
+| **Ground (Black/Brown)** | **GND** (Nano, connected to motor ground) |
+| **Signal (Orange/Yellow/White)** | **D11** (Nano Pin 16) |
 
-VCC_5V / GND near Nano --+--> Capacitor (+/-) (x 1-2 near Nano)
+**5. IMU (MPU6050)**
 
-VCC_5V / GND near Servo --+--> Capacitor (+/-) (x 1, if servo powered from VCC_5V)
+Uses the I2C bus on the Nano.
 
-Pi CSI Port <--- Pi Camera Module
+| MPU6050 Pin | Connection        |
+| :---------- | :---------------- |
+| **VCC**     | **3.3V** (Nano)   |
+| **GND**     | **GND** (Nano)    |
+| **SCL**     | **A5** (Nano Pin 28) |
+| **SDA**     | **A4** (Nano Pin 27) |
+| **XDA/XCL** | **(Usually Not Connected)** |
+| **ADO**     | **(Usually GND for default address 0x68)** |
+| **INT**     | **(Optional, Not Used in Provided Config)** |
+
+**6. Start Button**
+
+A simple push-button.
+
+| Button Terminal 1 | **D2** (Nano Pin 4) |
+| Button Terminal 2 | **GND** (Nano)     |
+*(Note: Your code likely uses `pinMode(START_BUTTON_PIN, INPUT_PULLUP);`, so no external pull-up resistor is needed.)*
+
+**7. Status LED (Optional)**
+
+A simple LED for debugging.
+
+| LED Anode (Long Leg) | **A1** (Nano Pin 24) via a ~220-330 Ohm resistor |
+| LED Cathode (Short Leg) | **GND** (Nano) |
+
+**Visual Representation (Conceptual)**
+
+Imagine your Arduino Nano board:
+
+*   **Digital Pins (D0-D13, A0-A5):**
+    *   **D2:** Start Button (other side to GND)
+    *   **D3:** US Front Trig
+    *   **D4:** US Front Echo
+    *   **D5:** US Right Trig
+    *   **D6:** US Right Echo
+    *   **D7:** US Back Trig
+    *   **D8:** US Back Echo
+    *   **D9:** US Left Trig
+    *   **D10:** US Left Echo
+    *   **D11:** Servo Signal
+    *   **D12:** L298N ENA
+    *   **D13:** L298N IN1
+    *   **A0:** L298N IN2
+    *   **A1:** Status LED (Anode via resistor)
+    *   **A4 (SDA):** MPU6050 SDA
+    *   **A5 (SCL):** MPU6050 SCL
+*   **Power Pins:**
+    *   **5V:** Connect to VCC of US Sensors, Servo, L298N Logic (VCC/GND pins), Status LED Cathode (via resistor).
+    *   **3.3V:** Connect to VCC of MPU6050.
+    *   **GND:** Connect to GND of US Sensors, Servo, MPU6050, L298N, Start Button (one side), Status LED Cathode.
+
+**Important Notes:**
+
+*   **Power:** Ensure your power supply (battery pack) can handle the current draw of the motors and other components. The L298N handles motor power, while the Nano/SENSORS need a stable 5V (or 3.3V for Nano/MPU6050). If using a buck converter, connect its output 5V/GND to the Nano's 5V/GND pins and sensor VCC/GND.
+*   **Common Ground:** It's crucial that the ground of your motor battery pack is connected to the ground of your Nano's power supply. This is the reference point for all signals.
+*   **Signal Voltage:** The Nano operates at 5V logic. Most sensors (including HC-SR04) are 5V tolerant. The MPU6050 typically runs at 3.3V, so connecting it to the Nano's 3.3V pin is correct. Be cautious if mixing 3.3V and 5V devices.
+*   **L298N Connections:** The specific connections for OUT1/OUT2 depend on your motor and how you want it to rotate. Swapping them reverses the motor direction.
+*   **Servo Power:** If your servo draws significant current, consider powering it from the battery pack directly (VCC/GND) rather than through the Nano, to avoid brownouts. Connect the signal wire to D11.
+
+This plan directly corresponds to the pin definitions in your `config.h` file.

@@ -125,7 +125,7 @@ void ImageProcessor::processingLoop()
         LOG_VERBOSE("ImageProcessor: processingLoop iteration started.");
         // Get the latest frame from the frame buffer
         // Check if a new frame is available first
-        if (frameBufferSource && frameBufferSource->hasNewFrame())
+        if (frameBufferSource)
         {
             LOG_DEBUG("ImageProcessor: frameBufferSource->hasNewFrame() returned true.");
             // Attempt to get the frame
@@ -146,10 +146,10 @@ void ImageProcessor::processingLoop()
                 // Reset wait counter as we processed a frame
                 wait_counter = 0;
             }
-            else
-            {
-                LOG_WARN("ImageProcessor: hasNewFrame() was true, but getFrame() failed. Possible race condition or buffer issue.");
-            }
+            // else
+            // {
+            //     LOG_WARN("ImageProcessor: hasNewFrame() was true, but getFrame() failed. Possible race condition or buffer issue.");
+            // }
         }
         else
         {

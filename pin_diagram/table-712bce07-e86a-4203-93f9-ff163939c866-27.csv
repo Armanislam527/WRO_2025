@@ -1,0 +1,8 @@
+﻿MPU6050 Pin,Connection
+VCC,3.3V (Nano)
+GND,GND (Nano)
+SCL,A5 (Nano Pin 28)
+SDA,A4 (Nano Pin 27)
+XDA/XCL,(Usually Not Connected)
+ADO,(Usually GND for default address 0x68)
+INT,"(Optional, Not Used in Provided Config)"

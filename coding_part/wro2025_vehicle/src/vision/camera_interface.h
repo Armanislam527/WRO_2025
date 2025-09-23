@@ -52,6 +52,10 @@ private:
 
     std::shared_ptr<FrameBuffer> frameBuffer;
 
+    // --- ADD THIS LINE: Member variable for JPEG SOI detection ---
+    uint8_t previous_byte; // Used in the state machine to find JPEG Start Of Image marker
+    // --- END OF ADDITION ---
+
     // Function run by the capture thread
     void captureLoop();
 };

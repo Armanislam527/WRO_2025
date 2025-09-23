@@ -27,6 +27,7 @@ std::atomic<bool> g_shutdownRequested(false);
 void signalHandler(int signal);
 void initializeSystem();
 bool initializeModules();
+void shutdownModules();
 void runMainLoop();
 void handlePreStart();
 void handleWaitingForGo();
@@ -45,15 +46,32 @@ std::shared_ptr<PathPlanner> g_pathPlanner;
 std::shared_ptr<VehicleController> g_vehicleController;
 std::shared_ptr<MissionState> g_missionState;
 std::shared_ptr<PositionalMemory> g_positionalMemory;
-
+extern std::atomic<bool> g_shutdownRequested;
+void signalHandler(int signal)
+{
+    if (signal == SIGINT || signal == SIGTERM)
+    {
+        std::cout << "\nSignal (" << signal << ") received. Requesting graceful shutdown..." << std::endl;
+        g_shutdownRequested.store(true); // Set the atomic flag
+    }
+    else
+    {
+        std::cout << "\nUnhandled signal (" << signal << ") received. Requesting shutdown..." << std::endl;
+        g_shutdownRequested.store(true);
+    }
+}
 int main(int argc, char *argv[])
 {
     (void)argc; // Explicitly mark as unused
     (void)argv;
     std::cout << "WRO 2025 Future Engineers - Raspberry Pi Controller" << std::endl;
     std::cout << "Initializing system..." << std::endl;
+    if (signal(SIGINT, signalHandler) == SIG_ERR || signal(SIGTERM, signalHandler) == SIG_ERR)
+    {
+        std::cerr << "Warning: Failed to register signal handlers." << std::endl;
+    }
 
-    signal(SIGINT, signalHandler);
+    // bool initSuccess = false;
 
     try
     {
@@ -86,21 +104,11 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void signalHandler(int signal)
-{
-    if (signal == SIGINT)
-    {
-        std::cout << "\nCtrl+C received. Requesting shutdown..." << std::endl;
-        g_shutdownRequested = true;
-    }
-}
-
 void initializeSystem()
 {
     // TODO: Initialize logging, load config files if needed
     std::cout << "System core initialized." << std::endl;
 }
-
 bool initializeModules()
 {
     bool success = true;
@@ -195,7 +203,61 @@ bool initializeModules()
 
     return success;
 }
+void shutdownModules()
+{
+    std::cout << "Shutting down modules..." << std::endl;
 
+    // --- STOP MODULES IN REVERSE ORDER OF DEPENDENCY ---
+    // Stop high-level processing first.
+
+    // 1. Stop Image Processing
+    if (g_imageProcessor)
+    {
+        std::cout << "Stopping ImageProcessor..." << std::endl;
+        g_imageProcessor->stopProcessing(); // Signal processing thread to stop
+        // stopProcessing should handle thread joining internally
+        // g_imageProcessor.reset(); // Optional: Explicitly reset if needed sooner
+    }
+
+    // 2. Stop Camera Capture
+    if (g_cameraInterface)
+    {
+        std::cout << "Stopping CameraInterface..." << std::endl;
+        g_cameraInterface->stopCapture(); // Signal capture thread to stop
+        // stopCapture should handle thread joining and rpicam-vid process termination
+        // g_cameraInterface.reset(); // Optional: Explicitly reset if needed sooner
+    }
+
+    // 3. Stop Vehicle Controller (ensure motors are off)
+    if (g_vehicleController)
+    {
+        std::cout << "Stopping VehicleController..." << std::endl;
+        g_vehicleController->emergencyStop(); // Ensure vehicle is stopped
+        // g_vehicleController.reset(); // Optional reset
+    }
+
+    // 4. Close Serial Port
+    if (g_serialHandler)
+    {
+        std::cout << "Closing SerialHandler..." << std::endl;
+        g_serialHandler->closePort(); // Close the serial connection
+        // g_serialHandler.reset(); // Optional reset
+    }
+
+    // Reset shared_ptrs to allow modules to clean up
+    // This should happen naturally as they go out of scope, but explicit reset
+    // can be useful if specific destruction order matters or to release resources immediately.
+    g_pathPlanner.reset();
+    g_lapCounter.reset();
+    g_positionalMemory.reset();
+    g_missionState.reset();
+    g_imageProcessor.reset();
+    g_cameraInterface.reset();
+    g_vehicleController.reset();
+    g_serialHandler.reset();
+
+    std::cout << "Module shutdown complete." << std::endl;
+}
 void runMainLoop()
 {
     // This is the central orchestrator of the vehicle's actions.

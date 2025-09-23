@@ -1,0 +1,13 @@
+﻿L298N Pin,Connection
+ENA,D12 (Nano Pin 19)
+IN1,D13 (Nano Pin 17)
+IN2,A0 (Nano Pin 23)
+IN3,Not Connected (Single Motor)
+IN4,Not Connected (Single Motor)
+ENB,Not Connected (Single Motor)
+VCC,+ve Battery Pack Terminal
+GND,-ve Battery Pack Terminal
+5V,(See Power Supply Note)
+OUT1,One Terminal of Rear Motor
+OUT2,Other Terminal of Rear Motor
+5V/GND (Logic Power),5V/GND from Nano's power source

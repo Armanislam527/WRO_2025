@@ -1,0 +1,4 @@
+﻿Servo Wire,Connection
+Power (Red/Brown),5V (Nano or dedicated servo power)
+Ground (Black/Brown),GND" (Nano, connected to motor ground)"
+Signal (Orange/Yellow/White),D11 (Nano Pin 16)
