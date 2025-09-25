@@ -15,6 +15,7 @@ from navigation.positional_memory import PositionalMemory
 from vision.frame_buffer import FrameBuffer
 from vision.camera_interface import CameraInterface
 from vision.image_processor import ImageProcessor
+from vision.vision_snapshot import VisionSnapshot
 from control.path_planner import PathPlanner
 from control.navigation_command import NavigationCommand, NavigationAction
 from actuators.vehicle_controller import VehicleController
@@ -205,13 +206,10 @@ def run_main_loop(modules: dict):
                     initial_data_stored = True
 
                 # Update navigation
-                lap_counter.update(latest_vision_snapshot, latest_sensor_data)
-                path_plan = path_planner.plan_path(
-                    latest_vision_snapshot,
-                    latest_sensor_data,
-                    mission_state.get_challenge_type(),
-                    lap_counter.get_lap_count()
-                )
+                # Update lap counter (expects sensor_data first)
+                lap_counter.update(latest_sensor_data, latest_vision_snapshot)
+                # Plan next action
+                path_plan = path_planner.plan(latest_sensor_data, latest_vision_snapshot, mission_state)
                 vehicle_controller.execute_command(path_plan)
 
             # Maintain loop rate

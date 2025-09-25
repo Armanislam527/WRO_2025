@@ -116,7 +116,7 @@ class VehicleController:
         """Send motor speed command via serial handler."""
         if speed != self._last_motor_speed:
             logger.debug(f"VehicleController: Sending motor speed {speed}")
-            self.serial_handler.send_motor_speed_command(speed)
+            self.serial_handler.sendMotorSpeedCommand(speed)
             self._last_motor_speed = speed
 
     def _send_servo_command(self, angle: int):
@@ -125,7 +125,7 @@ class VehicleController:
         clamped_angle = max(0, min(180, angle))
         if clamped_angle != self._last_servo_angle:
             logger.debug(f"VehicleController: Sending servo angle {clamped_angle}")
-            self.serial_handler.send_servo_angle_command(clamped_angle)
+            self.serial_handler.sendServoAngleCommand(clamped_angle)
             self._last_servo_angle = clamped_angle
 
     # --- Parking Sequence Logic ---
@@ -225,7 +225,7 @@ class VehicleController:
         self.parking_active = False # Cancel any active maneuver
         self._send_motor_command(0)
         self._send_servo_command(90)
-        self.serial_handler.send_emergency_stop() # Send dedicated E-Stop command
+        self.serial_handler.sendEmergencyStop() # Send dedicated E-Stop command
 
 
 # Example usage (if run as script - needs mocks)

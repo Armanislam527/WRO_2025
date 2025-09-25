@@ -1,96 +1,98 @@
 # vision/camera_interface.py
-"""Interface to the Raspberry Pi camera using rpicam-vid subprocess."""
+"""Interface to the Raspberry Pi camera using OpenCV + GStreamer.
 
-import subprocess
-import threading
-import time
+Captures frames and pushes JPEG-encoded bytes to FrameBuffer for downstream
+processing. Designed for Raspberry Pi Zero 2 W performance constraints.
+"""
+
 import logging
-import os
+import time
+from threading import Thread
 from typing import Optional
 
-# Import our modules
+import cv2
+
+from vision.frame_buffer import FrameBuffer
 import config.vehicle_config as cfg
-if __debug__: # Only import if debug mode is enabled (or always for type hints)
-    from vision.frame_buffer import FrameBuffer
 
 logger = logging.getLogger(__name__)
 
-class CameraInterface:
-    """
-    Manages the rpicam-vid process to capture JPEG frames
-    and puts them into a FrameBuffer.
-    Optimized for performance on Pi Zero 2W.
-    """
 
-    def __init__(self, frame_buffer):
+class CameraInterface:
+    """Capture frames from the Pi camera and enqueue JPEG bytes."""
+
+    def __init__(self, frame_buffer: FrameBuffer):
         self.frame_buffer = frame_buffer
-        self.cap = None
+        self.cap: Optional[cv2.VideoCapture] = None
         self.is_capturing = False
-        self.capture_thread = None
-    def start_capture(self):
-        for _ in range(3):  # Retry 3 times
-            pipeline = "libcamerasrc camera-name=/base/soc/i2c0mux/i2c@1/ov5647@36 ! video/x-raw,width=320,height=240,framerate=10/1 ! videoconvert ! appsink"
+        self.capture_thread: Optional[Thread] = None
+
+    def start_capture(self) -> bool:
+        if self.is_capturing:
+            logger.warning("CameraInterface: Capture already running.")
+            return False
+
+        # Prefer a low-res, low-fps pipeline for the Pi Zero 2 W
+        width = max(1, int(getattr(cfg, 'CAMERA_WIDTH', 320)))
+        height = max(1, int(getattr(cfg, 'CAMERA_HEIGHT', 240)))
+        fps = max(1, int(getattr(cfg, 'CAMERA_FPS', 10)))
+
+        # Use camera_auto_detect=1 from firmware config; do not force camera-name
+        pipeline = (
+            f"libcamerasrc ! video/x-raw,width={width},height={height},framerate={fps}/1 ! "
+            "videoconvert ! appsink"
+        )
+
+        for attempt in range(3):
             self.cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
             if self.cap.isOpened():
                 self.is_capturing = True
-                self.capture_thread = Thread(target=self._capture_loop)
+                self.capture_thread = Thread(target=self._capture_loop, daemon=True)
                 self.capture_thread.start()
                 logger.info("CameraInterface: Capture started successfully.")
                 return True
-            logger.warning("Camera open failed, retrying...")
+            logger.warning(f"CameraInterface: Open failed (attempt {attempt + 1}/3). Retrying...")
             time.sleep(1)
-        logger.error("Camera capture failed after retries.")
+
+        logger.error("CameraInterface: Capture failed after retries.")
         return False
+
     def stop_capture(self):
-        """Stops the capture process and thread."""
-        if not self._is_capturing:
+        if not self.is_capturing:
             return
-
         logger.info("CameraInterface: Stopping capture...")
-        self._stop_capture.set()
-
-        if self._capture_thread and self._capture_thread.is_alive():
-            self._capture_thread.join(timeout=2.0)
-            if self._capture_thread.is_alive():
-                logger.warning("CameraInterface: Capture thread did not stop gracefully.")
-
-        if self._process:
-            self._terminate_process()
-
-        self._is_capturing = False
+        self.is_capturing = False
+        if self.capture_thread and self.capture_thread.is_alive():
+            self.capture_thread.join(timeout=2.0)
+        if self.cap:
+            self.cap.release()
+            self.cap = None
         self.frame_buffer.clear()
         logger.info("CameraInterface: Capture stopped.")
 
-    def _terminate_process(self):
-        """Terminate the rpicam-vid process cleanly."""
-        try:
-            os.killpg(os.getpgid(self._process.pid), 15) # SIGTERM
-            self._process.wait(timeout=1.5)
-        except (subprocess.TimeoutExpired, ProcessLookupError, PermissionError):
-            try:
-                os.killpg(os.getpgid(self._process.pid), 9) # SIGKILL
-            except (ProcessLookupError, PermissionError):
-                pass
-        except Exception as e:
-            logger.error(f"CameraInterface: Error terminating process: {e}")
-        finally:
-            self._process = None
-
     def is_running(self) -> bool:
-        return self._is_capturing
+        return self.is_capturing
 
     def _capture_loop(self):
-      while self.is_capturing:
-          ret, frame = self.cap.read()
-          if ret and frame is not None and not frame.size == 0:
-              self.frame_buffer.add_frame(frame)
-              logger.debug("Frame added to buffer.")
-          time.sleep(0.1)  # ~10 FPS
-      self.cap.release()
-# Example usage (if run as script - needs mocks)
+        while self.is_capturing and self.cap:
+            ret, frame = self.cap.read()
+            if not ret or frame is None or frame.size == 0:
+                logger.warning("CameraInterface: Failed to capture frame.")
+                time.sleep(0.1)
+                continue
+
+            # Encode as JPEG to reduce size across threads
+            success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            if success:
+                self.frame_buffer.put(encoded.tobytes())
+                logger.debug("CameraInterface: JPEG frame enqueued.")
+            else:
+                logger.debug("CameraInterface: JPEG encode failed, skipping frame.")
+
+            time.sleep(0.1)  # ~10 FPS
+
+
 if __name__ == "__main__":
-    import utils.logger
-    utils.logger.setup_logging()
-    
-    # This would typically be tested with actual FrameBuffer and main application flow
-    print("CameraInterface class defined.")
+    import utils.logger as logutil
+    logutil.setup_logging()
+    print("CameraInterface ready.")

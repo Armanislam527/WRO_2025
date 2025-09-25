@@ -5,16 +5,17 @@
 import os
 
 # --- Serial Communication ---
-# SERIAL_PORT = os.environ.get("WRO_SERIAL_PORT", "/dev/serial0") # Default, can be overridden by environment variable
-SERIAL_PORT = "/dev/ttyUSB0" # For testing with USB-Serial adapter, change as needed
+# Prefer GPIO UART on Pi: /dev/serial0 (can be overridden for USB adapters)
+SERIAL_PORT = os.environ.get("WRO_SERIAL_PORT", "/dev/serial0")
 SERIAL_BAUDRATE = 115200
 
 # --- Camera ---
-# Default camera settings (can be adjusted)
-CAMERA_WIDTH = 640
-CAMERA_HEIGHT = 480
-CAMERA_FPS = 30
-CAMERA_DEVICE = "/base/soc/i2c0mux/i2c@1/imx219@10" # Default for Pi Camera Module 2, adjust if needed for OV5647 or libcamera
+# Default camera settings for Pi Zero 2 W (balanced for performance)
+CAMERA_WIDTH = int(os.environ.get("WRO_CAMERA_WIDTH", 320))
+CAMERA_HEIGHT = int(os.environ.get("WRO_CAMERA_HEIGHT", 240))
+CAMERA_FPS = int(os.environ.get("WRO_CAMERA_FPS", 10))
+# GStreamer auto-detect; leave device unspecified to respect camera_auto_detect=1
+CAMERA_DEVICE = os.environ.get("WRO_CAMERA_DEVICE", "")
 
 # --- Sensor Data Packet (Matching C++ CompactSensorData) ---
 # Size of the CompactSensorData struct from C++
