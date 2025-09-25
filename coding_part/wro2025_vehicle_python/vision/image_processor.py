@@ -125,13 +125,16 @@ class ImageProcessor:
 
         try:
             while not self._stop_processing.is_set():
+                logger.debug("ImageProcessor: Attempting to get frame from buffer...")
                 # Get frame with a short timeout to allow checking stop flag
                 jpeg_data = self.frame_buffer.get(timeout=0.05) # 50ms timeout
                 if jpeg_data is None:
+                    logger.debug("ImageProcessor: Frame buffer get timed out.")
                     continue # Timeout or no frame, loop again
-                logger.debug(f"ImageProcessor: Got a frame ({len(jpeg_data)} bytes)")
+                logger.debug("ImageProcessor: Got frame ({len(jpeg_data)} bytes) from buffer.")
                 frame_counter += 1
                 start_time = time.perf_counter() # Use perf_counter for better precision
+                logger.debug(f"ImageProcessor: Got frame {frame_counter} ({len(jpeg_data)} bytes) from buffer.")
 
                 # --- PERFORMANCE: Efficient JPEG Decoding ---
                 # np.frombuffer creates a view, cv2.imdecode decodes in place
@@ -145,6 +148,7 @@ class ImageProcessor:
 
                 # --- PERFORMANCE: Dynamic ROI based on frame size ---
                 h, w = frame_bgr.shape[:2]
+                logger.debug(f"ImageProcessor: Frame {frame_counter} decoded ({w}x{h}). Applying ROI: {self._current_roi}")
                 # Scale ROI if frame size differs from config (though it shouldn't if rpicam-vid is set correctly)
                 scale_x = w / cfg.CAMERA_WIDTH if cfg.CAMERA_WIDTH > 0 else 1
                 scale_y = h / cfg.CAMERA_HEIGHT if cfg.CAMERA_HEIGHT > 0 else 1
@@ -247,8 +251,8 @@ class ImageProcessor:
                     self._new_snapshot_available = True
 
                 # --- PERFORMANCE: Log FPS/Processing Time ---
-                # if frame_counter % 30 == 0: # Log every 30 frames
-                #     logger.debug(f"ImageProcessor: Frame {frame_counter} processed in {snapshot.processing_time_ms:.2f}ms.")
+                if frame_counter % 30 == 0: # Log every 30 frames
+                    logger.debug(f"ImageProcessor: Frame {frame_counter} processed in {snapshot.processing_time_ms:.2f}ms.")
 
         except Exception as e:
             logger.error(f"ImageProcessor: Error in processing loop: {e}", exc_info=True)

@@ -26,19 +26,23 @@ class FrameBuffer:
         """Put a frame into the buffer, discarding oldest if full."""
         try:
             self._queue.put_nowait(frame_data)
+            logger.debug(f"FrameBuffer: Put frame ({len(frame_data)} bytes). Buffer size: {self.qsize()}")
         except queue.Full:
             try:
                 self._queue.get_nowait() # Discard oldest
                 self._queue.put_nowait(frame_data) # Add new
-                # logger.debug("FrameBuffer: Discarded oldest frame.")
+                logger.debug("FrameBuffer: Discarded oldest frame to make space for new.")
             except (queue.Empty, queue.Full):
-                logger.warning("FrameBuffer: Unexpected state during put.")
+                logger.warning("FrameBuffer: Unexpected state during put(Full/Empty).")
 
     def get(self, timeout: Optional[float] = None) -> Optional[bytes]:
         """Get a frame from the buffer."""
         try:
-            return self._queue.get(timeout=timeout)
+            data = self._queue.get(timeout=timeout)
+            logger.debug(f"FrameBuffer: Got frame ({len(data)} bytes). Buffer size: {self.qsize()}")
+            return data
         except queue.Empty:
+            logger.debug("FrameBuffer: Get timed out or buffer empty.")
             return None
 
     def empty(self) -> bool:

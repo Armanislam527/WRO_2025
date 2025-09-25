@@ -1,0 +1,1439 @@
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part$ cd WRO2025_Nano/
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/WRO2025_Nano$ ls -la
+total 96
+drwxrwxr-x 2 arman arman  4096 Sep 19 18:56 .
+drwxrwxr-x 6 arman arman  4096 Sep 23 17:42 ..
+-rw-rw-r-- 1 arman arman  1485 Sep 19 11:30 config.h
+-rw-rw-r-- 1 arman arman  2042 Sep 19 11:51 e_stop.cpp
+-rw-rw-r-- 1 arman arman   688 Sep 19 11:51 e_stop.h
+-rw-rw-r-- 1 arman arman  5308 Sep 19 11:32 imu_handler.cpp
+-rw-rw-r-- 1 arman arman  1037 Sep 19 11:32 imu_handler.h
+-rw-rw-r-- 1 arman arman  1740 Sep 19 18:07 motor_controller.cpp
+-rw-rw-r-- 1 arman arman   591 Sep 19 11:35 motor_controller.h
+-rw-rw-r-- 1 arman arman  4404 Sep 19 19:13 serial_parser.cpp
+-rw-rw-r-- 1 arman arman   946 Sep 19 12:04 serial_parser.h
+-rw-rw-r-- 1 arman arman  1761 Sep 19 11:46 serial_protocol.cpp
+-rw-rw-r-- 1 arman arman  1924 Sep 19 19:16 serial_protocol.h
+-rw-rw-r-- 1 arman arman  1323 Sep 19 11:37 servo_controller.cpp
+-rw-rw-r-- 1 arman arman   553 Sep 19 11:37 servo_controller.h
+-rw-rw-r-- 1 arman arman  1920 Sep 19 11:34 us_sensor_array.cpp
+-rw-rw-r-- 1 arman arman   929 Sep 19 11:34 us_sensor_array.h
+-rw-rw-r-- 1 arman arman  1343 Sep 19 11:49 watchdog.cpp
+-rw-rw-r-- 1 arman arman   553 Sep 19 11:49 watchdog.h
+-rw-rw-r-- 1 arman arman 10086 Sep 24 07:30 WRO2025_Nano.ino
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part$ cd WRO2025_Nano/
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/WRO2025_Nano$ cat *
+// config.h
+// Pin definitions and vehicle configuration constants
+
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// -----------------------------
+// Pin Definitions
+// -----------------------------
+
+// Ultrasonic Sensors
+#define US_FRONT_TRIG_PIN 3
+#define US_FRONT_ECHO_PIN 4
+#define US_RIGHT_TRIG_PIN 5
+#define US_RIGHT_ECHO_PIN 6
+#define US_BACK_TRIG_PIN 7
+#define US_BACK_ECHO_PIN 8
+#define US_LEFT_TRIG_PIN 9
+#define US_LEFT_ECHO_PIN 10
+
+// Motor Driver (L298N)
+#define MOTOR_ENA_PIN 12
+#define MOTOR_IN1_PIN 13
+#define MOTOR_IN2_PIN A0
+
+// Servo Motor
+#define SERVO_PIN 11
+
+// IMU (MPU6050) - Uses I2C
+// SDA -> A4
+// SCL -> A5
+
+// Start Button
+#define START_BUTTON_PIN 2
+
+// Status LED (optional, for debugging)
+#define STATUS_LED_PIN A1
+
+// -----------------------------
+// Vehicle Configuration
+// -----------------------------
+
+// Motor configuration
+#define MOTOR_MIN_SPEED 0
+#define MOTOR_MAX_SPEED 255
+#define MOTOR_STOP 0
+
+// Servo configuration
+#define SERVO_MIN_ANGLE 0
+#define SERVO_MAX_ANGLE 180
+#define SERVO_CENTER_ANGLE 90
+
+// Ultrasonic sensor configuration
+#define US_MAX_DISTANCE 200     // Maximum distance we want to measure (in cm)
+#define US_MEASURE_INTERVAL 100 // Time between measurements (in milliseconds)
+
+// Watchdog configuration
+#define WATCHDOG_TIMEOUT 500 // Time in ms to wait for heartbeat before emergency stop
+
+// Communication
+#define SERIAL_BAUD_RATE 115200
+#define COMMUNICATION_TIMEOUT 1000 // Time in ms to wait for valid packet
+
+#endif // CONFIG_H// e_stop.cpp
+// Implementation of the emergency stop handler
+
+#include "e_stop.h"
+// We'll need to include the motor and servo controllers
+// In a full implementation, you might use forward declarations or pass references
+// For now, we'll assume these functions exist or are declared elsewhere
+// #include "actuators/motor_controller.h"
+// #include "actuators/servo_controller.h"
+
+// Since we don't have direct access to motor/servo controllers here,
+// we'll use the pin definitions from config.h
+#include "config.h"
+
+EStopHandler::EStopHandler() : _eStopActive(false)
+{
+}
+
+void EStopHandler::initialize()
+{
+    // Emergency stop state is managed internally
+    // In a more complex system, you might have a physical e-stop button
+    // For now, we rely on software commands
+    _eStopActive = false;
+}
+
+void EStopHandler::activateEStop()
+{
+    // Only activate if not already active
+    if (!_eStopActive)
+    {
+        _eStopActive = true;
+
+        // Immediately stop the motor
+        // In a full implementation, you would call motorController.stop()
+        digitalWrite(MOTOR_ENA_PIN, LOW);
+        digitalWrite(MOTOR_IN1_PIN, LOW);
+        digitalWrite(MOTOR_IN2_PIN, LOW);
+
+        // Center the servo (safe steering position)
+        // In a full implementation, you would call servoController.center()
+        // For now, we'll assume a servo object is available or we control the pin directly
+        // This is a simplification - normally you'd use the Servo library functions
+
+        // Indicate emergency stop activation with LED
+        digitalWrite(STATUS_LED_PIN, HIGH);
+    }
+}
+
+bool EStopHandler::isEStopActive() const
+{
+    return _eStopActive;
+}
+
+void EStopHandler::resetEStop()
+{
+    // Only reset if currently in e-stop state
+    if (_eStopActive)
+    {
+        _eStopActive = false;
+
+        // Turn off emergency stop indicator
+        digitalWrite(STATUS_LED_PIN, LOW);
+    }
+}
+
+void EStopHandler::handleEStopCommand()
+{
+    // Simply activate the emergency stop when command is received
+    activateEStop();
+}// e_stop.h
+// Handles emergency stop functionality for immediate vehicle halt
+
+#ifndef E_STOP_H
+#define E_STOP_H
+
+#include <Arduino.h>
+
+class EStopHandler
+{
+public:
+    EStopHandler();
+
+    // Initialize the emergency stop handler
+    void initialize();
+
+    // Activate emergency stop - immediately stops all vehicle movement
+    void activateEStop();
+
+    // Check if emergency stop is currently active
+    bool isEStopActive() const;
+
+    // Reset emergency stop condition (only call after resolving the cause)
+    void resetEStop();
+
+    // Handle emergency stop command from serial communication
+    void handleEStopCommand();
+
+private:
+    bool _eStopActive;
+};
+
+#endif // E_STOP_H// imu_handler.cpp
+// Implementation of the IMU handler for MPU6050
+
+#include "imu_handler.h"
+#include <Wire.h>
+
+// MPU6050 I2C address
+#define MPU6050_ADDRESS 0x68
+
+// MPU6050 registers
+#define MPU6050_RA_PWR_MGMT_1 0x6B
+#define MPU6050_RA_ACCEL_XOUT_H 0x3B
+#define MPU6050_RA_GYRO_XOUT_H 0x43
+#define MPU6050_RA_WHO_AM_I 0x75
+
+// Configuration registers
+#define MPU6050_RA_CONFIG 0x1A
+#define MPU6050_RA_GYRO_CONFIG 0x1B
+#define MPU6050_RA_ACCEL_CONFIG 0x1C
+
+// Power management
+#define MPU6050_PWR1_SLEEP_BIT 6
+#define MPU6050_PWR1_CLKSEL_BIT 2
+#define MPU6050_PWR1_CLKSEL_LENGTH 3
+
+// Gyro configuration
+#define MPU6050_GYRO_FS_250 0x00
+#define MPU6050_GYRO_FS_500 0x01
+#define MPU6050_GYRO_FS_1000 0x02
+#define MPU6050_GYRO_FS_2000 0x03
+
+// Accelerometer configuration
+#define MPU6050_ACCEL_FS_2 0x00
+#define MPU6050_ACCEL_FS_4 0x01
+#define MPU6050_ACCEL_FS_8 0x02
+#define MPU6050_ACCEL_FS_16 0x03
+
+IMUHandler::IMUHandler() : _initialized(false),
+                           accelXOffset(0), accelYOffset(0), accelZOffset(0),
+                           gyroXOffset(0), gyroYOffset(0), gyroZOffset(0)
+{
+}
+
+bool IMUHandler::initialize()
+{
+    Wire.begin();
+
+    // Check if sensor is connected
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(MPU6050_RA_WHO_AM_I);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU6050_ADDRESS, 1, true);
+
+    if (Wire.available())
+    {
+        uint8_t deviceId = Wire.read();
+        if (deviceId != 0x68)
+        {
+            return false; // Not the expected device ID
+        }
+    }
+    else
+    {
+        return false; // No response from sensor
+    }
+
+    // Wake up the MPU-6050
+    writeRegister(MPU6050_RA_PWR_MGMT_1, 0x00);
+
+    // Set clock source to X Gyro
+    writeRegister(MPU6050_RA_PWR_MGMT_1, 0x01);
+
+    // Configure accelerometer range (+/- 2g)
+    writeRegister(MPU6050_RA_ACCEL_CONFIG, MPU6050_ACCEL_FS_2 << 3);
+
+    // Configure gyro range (+/- 250 deg/s)
+    writeRegister(MPU6050_RA_GYRO_CONFIG, MPU6050_GYRO_FS_250 << 3);
+
+    // Set digital low pass filter
+    writeRegister(MPU6050_RA_CONFIG, 0x03); // ~44Hz bandwidth
+
+    _initialized = true;
+    return true;
+}
+
+bool IMUHandler::readData(IMUData &data)
+{
+    if (!_initialized)
+    {
+        return false;
+    }
+
+    int16_t ax, ay, az, gx, gy, gz;
+    readRawData(&ax, &ay, &az, &gx, &gy, &gz);
+
+    // Convert raw values to meaningful units
+    // Accelerometer: 2g range, 16384 LSB/g
+    data.accelX = (ax - accelXOffset) / 16384.0f;
+    data.accelY = (ay - accelYOffset) / 16384.0f;
+    data.accelZ = (az - accelZOffset) / 16384.0f;
+
+    // Gyroscope: 250 deg/s range, 131 LSB/(deg/s)
+    data.gyroX = (gx - gyroXOffset) / 131.0f;
+    data.gyroY = (gy - gyroYOffset) / 131.0f;
+    data.gyroZ = (gz - gyroZOffset) / 131.0f;
+
+    // Temperature: 340 LSB/°C, -15.5556 LSB/°C offset
+    // Note: This is a simplified temperature conversion
+    data.temperature = 0.0f; // Placeholder - would need proper implementation
+
+    return true;
+}
+
+void IMUHandler::calibrate()
+{
+    if (!_initialized)
+    {
+        return;
+    }
+
+    // Reset offsets
+    accelXOffset = 0;
+    accelYOffset = 0;
+    accelZOffset = 0;
+    gyroXOffset = 0;
+    gyroYOffset = 0;
+    gyroZOffset = 0;
+
+    // Collect samples for calibration
+    const int samples = 1000;
+    long accelXSum = 0, accelYSum = 0, accelZSum = 0;
+    long gyroXSum = 0, gyroYSum = 0, gyroZSum = 0;
+
+    for (int i = 0; i < samples; i++)
+    {
+        int16_t ax, ay, az, gx, gy, gz;
+        readRawData(&ax, &ay, &az, &gx, &gy, &gz);
+
+        accelXSum += ax;
+        accelYSum += ay;
+        accelZSum += az;
+        gyroXSum += gx;
+        gyroYSum += gy;
+        gyroZSum += gz;
+
+        delay(5); // Small delay between samples
+    }
+
+    // Calculate average offsets
+    accelXOffset = accelXSum / samples;
+    accelYOffset = accelYSum / samples;
+    accelZOffset = accelZSum / samples - 16384; // Subtract 1g for Z-axis
+    gyroXOffset = gyroXSum / samples;
+    gyroYOffset = gyroYSum / samples;
+    gyroZOffset = gyroZSum / samples;
+}
+
+int16_t IMUHandler::readRegister16(uint8_t reg)
+{
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(reg);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU6050_ADDRESS, 2, true);
+
+    if (Wire.available() < 2)
+    {
+        return 0;
+    }
+
+    int16_t value = (Wire.read() << 8) | Wire.read();
+    return value;
+}
+
+void IMUHandler::writeRegister(uint8_t reg, uint8_t value)
+{
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(reg);
+    Wire.write(value);
+    Wire.endTransmission(true);
+}
+
+void IMUHandler::readRawData(int16_t *ax, int16_t *ay, int16_t *az,
+                             int16_t *gx, int16_t *gy, int16_t *gz)
+{
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(MPU6050_RA_ACCEL_XOUT_H);
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU6050_ADDRESS, 14, true); // Read 14 bytes (accel + temp + gyro)
+
+    if (Wire.available() == 14)
+    {
+        *ax = (Wire.read() << 8) | Wire.read();
+        *ay = (Wire.read() << 8) | Wire.read();
+        *az = (Wire.read() << 8) | Wire.read();
+        // Skip temperature for now
+        Wire.read();
+        Wire.read();
+        *gx = (Wire.read() << 8) | Wire.read();
+        *gy = (Wire.read() << 8) | Wire.read();
+        *gz = (Wire.read() << 8) | Wire.read();
+    }
+}// imu_handler.h
+// Handles communication with the MPU6050 IMU sensor
+
+#ifndef IMU_HANDLER_H
+#define IMU_HANDLER_H
+
+#include <Arduino.h>
+
+// Structure to hold IMU data
+struct IMUData
+{
+    float accelX;
+    float accelY;
+    float accelZ;
+    float gyroX;
+    float gyroY;
+    float gyroZ;
+    float temperature;
+    // For more advanced implementations, you might add:
+    // float yaw, pitch, roll; // If using DMP or sensor fusion
+};
+
+class IMUHandler
+{
+public:
+    IMUHandler();
+    bool initialize();
+    bool readData(IMUData &data);
+    void calibrate();
+
+private:
+    bool _initialized;
+    // Calibration offsets
+    float accelXOffset;
+    float accelYOffset;
+    float accelZOffset;
+    float gyroXOffset;
+    float gyroYOffset;
+    float gyroZOffset;
+
+    // Private helper functions
+    int16_t readRegister16(uint8_t reg);
+    void writeRegister(uint8_t reg, uint8_t value);
+    void readRawData(int16_t *ax, int16_t *ay, int16_t *az,
+                     int16_t *gx, int16_t *gy, int16_t *gz);
+};
+
+#endif // IMU_HANDLER_H// motor_controller.cpp
+// Implementation of the motor controller for L298N
+
+#include "motor_controller.h"
+
+MotorController::MotorController() : _enaPin(0), _in1Pin(0), _in2Pin(0), _currentSpeed(0)
+{
+}
+
+void MotorController::initialize(uint8_t enaPin, uint8_t in1Pin, uint8_t in2Pin)
+{
+    _enaPin = enaPin;
+    _in1Pin = in1Pin;
+    _in2Pin = in2Pin;
+    digitalWrite(_enaPin, LOW);
+    digitalWrite(_in1Pin, LOW);
+    digitalWrite(_in2Pin, LOW);
+    // Set pin modes
+    pinMode(_enaPin, OUTPUT);
+    pinMode(_in1Pin, OUTPUT);
+    pinMode(_in2Pin, OUTPUT);
+    _currentSpeed = 0;
+    // Initialize motor to stopped state
+    stop();
+}
+
+void MotorController::setSpeed(int speed)
+{
+    // Constrain speed to valid range
+    if (speed > 255)
+        speed = 255;
+    if (speed < -255)
+        speed = -255;
+
+    _currentSpeed = speed;
+
+    if (speed == 0)
+    {
+        // Stop the motor
+        digitalWrite(_in1Pin, LOW);
+        digitalWrite(_in2Pin, LOW);
+        analogWrite(_enaPin, 0);
+    }
+    else if (speed > 0)
+    {
+        // Forward direction
+        _setMotorDirection(true);
+        analogWrite(_enaPin, speed);
+    }
+    else
+    {
+        // Reverse direction
+        _setMotorDirection(false);
+        analogWrite(_enaPin, -speed);
+    }
+}
+
+void MotorController::stop()
+{
+    _currentSpeed = 0;
+    digitalWrite(_in1Pin, LOW);
+    digitalWrite(_in2Pin, LOW);
+    analogWrite(_enaPin, 0);
+}
+
+int MotorController::getCurrentSpeed() const
+{
+    return _currentSpeed;
+}
+
+void MotorController::_setMotorDirection(bool forward)
+{
+    if (forward)
+    {
+        digitalWrite(_in1Pin, HIGH);
+        digitalWrite(_in2Pin, LOW);
+    }
+    else
+    {
+        digitalWrite(_in1Pin, LOW);
+        digitalWrite(_in2Pin, HIGH);
+    }
+}// motor_controller.h
+// Handles control of the vehicle's driving motor via L298N
+
+#ifndef MOTOR_CONTROLLER_H
+#define MOTOR_CONTROLLER_H
+
+#include <Arduino.h>
+
+class MotorController
+{
+public:
+    MotorController();
+    void initialize(uint8_t enaPin, uint8_t in1Pin, uint8_t in2Pin);
+    void setSpeed(int speed); // Speed from -255 (full reverse) to 255 (full forward)
+    void stop();
+    int getCurrentSpeed() const;
+
+private:
+    uint8_t _enaPin;
+    uint8_t _in1Pin;
+    uint8_t _in2Pin;
+    int _currentSpeed;
+    void _setMotorDirection(bool forward);
+};
+
+#endif // MOTOR_CONTROLLER_H// serial_parser.cpp
+// Implementation of the serial parser
+
+#include "serial_parser.h"
+
+SerialParser::SerialParser() : currentState(STATE_IDLE), dataBytesReceived(0)
+{
+    // Initialize the current packet
+    memset(&currentPacket, 0, sizeof(Packet));
+}
+
+bool SerialParser::readPacket(Packet &packet)
+{
+    while (Serial.available())
+    {
+        byte incomingByte = Serial.read();
+
+        switch (currentState)
+        {
+        case STATE_IDLE:
+            if (incomingByte == PACKET_START_BYTE)
+            {
+                currentState = STATE_START_RECEIVED;
+            }
+            break;
+
+        case STATE_START_RECEIVED:
+            currentPacket.command = incomingByte;
+            currentState = STATE_COMMAND_RECEIVED;
+            break;
+
+        case STATE_COMMAND_RECEIVED:
+            currentPacket.length = incomingByte;
+            // Validate length
+            if (currentPacket.length > PACKET_MAX_LENGTH)
+            {
+                resetParser();
+            }
+            else
+            {
+                dataBytesReceived = 0;
+                currentState = STATE_LENGTH_RECEIVED;
+            }
+            break;
+
+        case STATE_LENGTH_RECEIVED:
+            if (dataBytesReceived < currentPacket.length)
+            {
+                currentPacket.data[dataBytesReceived] = incomingByte;
+                dataBytesReceived++;
+            }
+
+            // Check if we've received all data bytes
+            if (dataBytesReceived >= currentPacket.length)
+            {
+                currentState = STATE_DATA_RECEIVED;
+            }
+            break;
+
+        case STATE_DATA_RECEIVED:
+            currentPacket.checksum = incomingByte;
+            currentState = STATE_CHECKSUM_RECEIVED;
+
+            // Validate packet
+            if (isValidPacket(currentPacket))
+            {
+                // Copy to output parameter
+                memcpy(&packet, &currentPacket, sizeof(Packet));
+                resetParser();
+                return true; // Valid packet received
+            }
+            else
+            {
+                // Invalid packet, reset parser
+                resetParser();
+            }
+            break;
+
+        default:
+            resetParser();
+            break;
+        }
+    }
+
+    return false; // No complete packet received
+}
+
+void SerialParser::sendPacket(const Packet &packet)
+{
+    // Send start byte
+    Serial.write(PACKET_START_BYTE);
+
+    // Send command
+    Serial.write(packet.command);
+
+    // Send length
+    Serial.write(packet.length);
+
+    // Send data
+    for (int i = 0; i < packet.length; i++)
+    {
+        Serial.write(packet.data[i]);
+    }
+
+    // Send checksum
+    Serial.write(packet.checksum);
+}
+
+void SerialParser::sendSensorData(unsigned int frontDist, unsigned int rightDist,
+                                  unsigned int backDist, unsigned int leftDist)
+{
+    Packet packet;
+    byte data[8];
+
+    // Pack distance data (2 bytes per distance)
+    data[0] = (frontDist >> 8) & 0xFF;
+    data[1] = frontDist & 0xFF;
+    data[2] = (rightDist >> 8) & 0xFF;
+    data[3] = rightDist & 0xFF;
+    data[4] = (backDist >> 8) & 0xFF;
+    data[5] = backDist & 0xFF;
+    data[6] = (leftDist >> 8) & 0xFF;
+    data[7] = leftDist & 0xFF;
+
+    createPacket(packet, CMD_SENSOR_DATA, 8, data);
+    sendPacket(packet);
+}
+
+void SerialParser::sendStartAck(bool started)
+{
+    Packet packet;
+    byte data[1] = {started ? 0x01 : 0x00};
+
+    createPacket(packet, CMD_START_ACK, 1, data);
+    sendPacket(packet);
+}
+
+void SerialParser::sendError(byte errorCode)
+{
+    Packet packet;
+    byte data[1] = {errorCode};
+
+    createPacket(packet, CMD_ERROR, 1, data);
+    sendPacket(packet);
+}
+
+void SerialParser::resetParser()
+{
+    currentState = STATE_IDLE;
+    dataBytesReceived = 0;
+    memset(&currentPacket, 0, sizeof(Packet));
+}
+void SerialParser::sendCompactSensorData(const CompactSensorData &data)
+{
+    Packet packet;
+
+    // Cast the struct directly to byte array for transmission
+    // This is very fast as it avoids manual packing/unpacking
+    const byte *dataPtr = reinterpret_cast<const byte *>(&data);
+    byte dataLength = sizeof(CompactSensorData); // Should be 20
+
+    // Use the existing createPacket function with our new command ID
+    createPacket(packet, CMD_ALL_SENSOR_DATA_COMPACT, dataLength, dataPtr);
+
+    // Send the packet using the existing robust sendPacket method
+    sendPacket(packet);
+}// serial_parser.h
+// Handles parsing of incoming serial data and sending packets
+
+#ifndef SERIAL_PARSER_H
+#define SERIAL_PARSER_H
+
+#include <Arduino.h>
+#include "serial_protocol.h"
+
+class SerialParser
+{
+public:
+    SerialParser();
+    bool readPacket(Packet &packet);
+    void sendPacket(const Packet &packet);
+    void sendSensorData(unsigned int frontDist, unsigned int rightDist,
+                        unsigned int backDist, unsigned int leftDist);
+    void sendStartAck(bool started);
+    void sendError(byte errorCode);
+    void sendCompactSensorData(const CompactSensorData &data);
+
+private:
+    enum ParseState
+    {
+        STATE_IDLE,
+        STATE_START_RECEIVED,
+        STATE_COMMAND_RECEIVED,
+        STATE_LENGTH_RECEIVED,
+        STATE_DATA_RECEIVED,
+        STATE_CHECKSUM_RECEIVED
+    };
+
+    ParseState currentState;
+    Packet currentPacket;
+    byte dataBytesReceived;
+
+    void resetParser();
+};
+
+#endif // SERIAL_PARSER_H// serial_protocol.cpp
+// Implementation of serial communication protocol utilities
+
+#include "serial_protocol.h"
+
+// Calculate checksum using XOR
+byte calculateChecksum(const byte *data, size_t length)
+{
+    byte checksum = 0;
+    for (size_t i = 0; i < length; i++)
+    {
+        checksum ^= data[i];
+    }
+    return checksum;
+}
+
+// Verify if a packet has a valid checksum
+bool isValidPacket(const Packet &packet)
+{
+    // Create temporary buffer for checksum calculation
+    byte tempBuffer[PACKET_MAX_LENGTH + 2]; // +2 for command and length
+    tempBuffer[0] = packet.command;
+    tempBuffer[1] = packet.length;
+
+    // Copy data bytes
+    for (int i = 0; i < packet.length && i < PACKET_MAX_LENGTH; i++)
+    {
+        tempBuffer[i + 2] = packet.data[i];
+    }
+
+    // Calculate expected checksum
+    byte expectedChecksum = calculateChecksum(tempBuffer, packet.length + 2);
+
+    // Compare with received checksum
+    return (expectedChecksum == packet.checksum);
+}
+
+// Create a packet with the specified parameters
+void createPacket(Packet &packet, byte command, byte length, const byte *data)
+{
+    packet.command = command;
+    packet.length = length;
+
+    // Copy data (up to maximum length)
+    for (int i = 0; i < length && i < PACKET_MAX_LENGTH; i++)
+    {
+        packet.data[i] = data[i];
+    }
+
+    // Create temporary buffer for checksum calculation
+    byte tempBuffer[PACKET_MAX_LENGTH + 2]; // +2 for command and length
+    tempBuffer[0] = packet.command;
+    tempBuffer[1] = packet.length;
+
+    // Copy data bytes
+    for (int i = 0; i < packet.length && i < PACKET_MAX_LENGTH; i++)
+    {
+        tempBuffer[i + 2] = packet.data[i];
+    }
+
+    // Calculate checksum
+    packet.checksum = calculateChecksum(tempBuffer, packet.length + 2);
+}// serial_protocol.h
+// Defines the serial communication protocol between Nano and Pi
+
+#ifndef SERIAL_PROTOCOL_H
+#define SERIAL_PROTOCOL_H
+
+#include <Arduino.h>
+
+// Packet structure constants
+#define PACKET_START_BYTE 0xAA
+#define PACKET_MAX_LENGTH 32
+
+// Command IDs from Pi to Nano
+#define CMD_SET_MOTOR_SPEED 0x01
+#define CMD_SET_SERVO_ANGLE 0x02
+#define CMD_EMERGENCY_STOP 0x03
+#define CMD_HEARTBEAT 0x04
+#define CMD_REQUEST_SENSOR_DATA 0x05
+#define CMD_PI_GO_SIGNAL 0x06 // <-- THIS LINE WAS MISSING
+
+// Command IDs from Nano to Pi
+#define CMD_SENSOR_DATA 0x10
+#define CMD_START_ACK 0x11
+#define CMD_ERROR 0x12
+#define CMD_ALL_SENSOR_DATA_COMPACT 0x13
+
+// Define a compact structure for ALL sensor data
+// This packs data efficiently for minimal transmission time
+// Total size: 20 bytes
+struct __attribute__((packed)) CompactSensorData
+{
+    uint16_t frontDistance; // 0-65535 cm - 2 bytes
+    uint16_t rightDistance; // 0-65535 cm - 2 bytes
+    uint16_t backDistance;  // 0-65535 cm - 2 bytes
+    uint16_t leftDistance;  // 0-65535 cm - 2 bytes
+    int16_t accelX;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+    int16_t accelY;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+    int16_t accelZ;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+    int16_t gyroX;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+    int16_t gyroY;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+    int16_t gyroZ;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+                            // Total: 20 bytes
+};
+
+// Structure for packet handling
+struct Packet
+{
+    byte command;
+    byte length;
+    byte data[PACKET_MAX_LENGTH];
+    byte checksum;
+};
+
+// Function prototypes
+byte calculateChecksum(const byte *data, size_t length);
+bool isValidPacket(const Packet &packet);
+void createPacket(Packet &packet, byte command, byte length, const byte *data);
+
+#endif // SERIAL_PROTOCOL_H// servo_controller.cpp
+// Implementation of the servo controller
+
+#include "servo_controller.h"
+
+ServoController::ServoController() : _servoPin(0), _currentAngle(90), _isAttached(false)
+{
+}
+
+void ServoController::initialize(uint8_t servoPin)
+{
+    _servoPin = servoPin;
+    _currentAngle = 90; // Default to center position
+
+    // Attach the servo to the specified pin
+    _steeringServo.attach(_servoPin);
+    _isAttached = true;
+
+    // Set to center position initially
+    _steeringServo.write(_currentAngle);
+}
+
+void ServoController::setAngle(int angle)
+{
+    // Constrain angle to valid range
+    if (angle < 0)
+        angle = 0;
+    if (angle > 180)
+        angle = 180;
+
+    _currentAngle = angle;
+
+    // Only write to servo if it's attached
+    if (_isAttached)
+    {
+        _steeringServo.write(_currentAngle);
+    }
+}
+
+void ServoController::center()
+{
+    setAngle(90);
+}
+
+int ServoController::getCurrentAngle() const
+{
+    return _currentAngle;
+}
+
+void ServoController::detach()
+{
+    if (_isAttached)
+    {
+        _steeringServo.detach();
+        _isAttached = false;
+    }
+}
+
+void ServoController::reattach()
+{
+    if (!_isAttached)
+    {
+        _steeringServo.attach(_servoPin);
+        _isAttached = true;
+        // Restore the last known position
+        _steeringServo.write(_currentAngle);
+    }
+}// servo_controller.h
+// Handles control of the vehicle's steering servo
+
+#ifndef SERVO_CONTROLLER_H
+#define SERVO_CONTROLLER_H
+
+#include <Arduino.h>
+#include <Servo.h>
+
+class ServoController
+{
+public:
+    ServoController();
+    void initialize(uint8_t servoPin);
+    void setAngle(int angle); // Angle from 0 to 180 degrees
+    void center();
+    int getCurrentAngle() const;
+    void detach();
+    void reattach();
+
+private:
+    Servo _steeringServo;
+    uint8_t _servoPin;
+    int _currentAngle;
+    bool _isAttached;
+};
+
+#endif // SERVO_CONTROLLER_H// us_sensor_array.cpp
+// Implementation of the ultrasonic sensor array handler
+
+#include "us_sensor_array.h"
+
+USSensorArray::USSensorArray() : usFront(nullptr), usRight(nullptr), usBack(nullptr), usLeft(nullptr),
+                                 maxDistance(200)
+{
+}
+
+void USSensorArray::initialize(uint8_t frontTrigPin, uint8_t frontEchoPin,
+                               uint8_t rightTrigPin, uint8_t rightEchoPin,
+                               uint8_t backTrigPin, uint8_t backEchoPin,
+                               uint8_t leftTrigPin, uint8_t leftEchoPin)
+{
+    // Delete existing objects if they exist
+    if (usFront)
+        delete usFront;
+    if (usRight)
+        delete usRight;
+    if (usBack)
+        delete usBack;
+    if (usLeft)
+        delete usLeft;
+
+    // Create new NewPing objects for each sensor
+    usFront = new NewPing(frontTrigPin, frontEchoPin, maxDistance);
+    usRight = new NewPing(rightTrigPin, rightEchoPin, maxDistance);
+    usBack = new NewPing(backTrigPin, backEchoPin, maxDistance);
+    usLeft = new NewPing(leftTrigPin, leftEchoPin, maxDistance);
+}
+
+bool USSensorArray::readData(USSensorData &data)
+{
+    // Check if sensors are initialized
+    if (!usFront || !usRight || !usBack || !usLeft)
+    {
+        return false;
+    }
+
+    // Read distances from each sensor
+    // Using ping_cm() for simplicity, though ping() with microsecond timing would be more precise
+    data.frontDistance = usFront->ping_cm();
+    data.rightDistance = usRight->ping_cm();
+    data.backDistance = usBack->ping_cm();
+    data.leftDistance = usLeft->ping_cm();
+
+    return true;
+}
+
+void USSensorArray::setMaxDistance(unsigned int maxDistance)
+{
+    this->maxDistance = maxDistance;
+
+    // If sensors are already initialized, we need to reinitialize them
+    // This is a limitation of the NewPing library
+    // In a real implementation, you might want to store the pin numbers and reinitialize
+}// us_sensor_array.h
+// Handles the ultrasonic sensor array for distance measurement
+
+#ifndef US_SENSOR_ARRAY_H
+#define US_SENSOR_ARRAY_H
+
+#include <Arduino.h>
+#include <NewPing.h>
+
+// Structure to hold ultrasonic sensor data
+struct USSensorData
+{
+    unsigned int frontDistance;
+    unsigned int rightDistance;
+    unsigned int backDistance;
+    unsigned int leftDistance;
+};
+
+class USSensorArray
+{
+public:
+    USSensorArray();
+    void initialize(uint8_t frontTrigPin, uint8_t frontEchoPin,
+                    uint8_t rightTrigPin, uint8_t rightEchoPin,
+                    uint8_t backTrigPin, uint8_t backEchoPin,
+                    uint8_t leftTrigPin, uint8_t leftEchoPin);
+    bool readData(USSensorData &data);
+    void setMaxDistance(unsigned int maxDistance);
+
+private:
+    NewPing *usFront;
+    NewPing *usRight;
+    NewPing *usBack;
+    NewPing *usLeft;
+    unsigned int maxDistance;
+};
+
+#endif // US_SENSOR_ARRAY_H// watchdog.cpp
+// Implementation of the safety watchdog
+
+#include "watchdog.h"
+
+Watchdog::Watchdog() : _timeout(0), _lastFeedTime(0), _initialized(false)
+{
+}
+
+void Watchdog::initialize(unsigned long timeoutMs)
+{
+    _timeout = timeoutMs;
+    _lastFeedTime = millis();
+    _initialized = true;
+}
+
+void Watchdog::feed()
+{
+    if (_initialized)
+    {
+        _lastFeedTime = millis();
+    }
+}
+
+bool Watchdog::isExpired()
+{
+    if (!_initialized)
+    {
+        return false; // If not initialized, don't trigger
+    }
+
+    unsigned long currentTime = millis();
+
+    // Handle millis() overflow (occurs every ~49 days)
+    if (currentTime < _lastFeedTime)
+    {
+        // Overflow occurred, treat as expired if timeout was very long (unlikely)
+        // In most cases, this means we recently fed the watchdog
+        return false;
+    }
+
+    return (currentTime - _lastFeedTime) > _timeout;
+}
+
+unsigned long Watchdog::getElapsedTime()
+{
+    if (!_initialized)
+    {
+        return 0;
+    }
+
+    unsigned long currentTime = millis();
+
+    // Handle millis() overflow
+    if (currentTime < _lastFeedTime)
+    {
+        // This is a simplification - in an overflow case, the elapsed time
+        // would be very large, indicating expiration
+        return _timeout + 1; // Ensure it appears expired
+    }
+
+    return currentTime - _lastFeedTime;
+}// watchdog.h
+// Implements a safety watchdog to monitor communication with the Pi
+
+#ifndef WATCHDOG_H
+#define WATCHDOG_H
+
+#include <Arduino.h>
+
+class Watchdog
+{
+public:
+    Watchdog();
+    void initialize(unsigned long timeoutMs);
+    void feed();                    // Reset the watchdog timer
+    bool isExpired();               // Check if the watchdog has timed out
+    unsigned long getElapsedTime(); // Get time since last feed
+
+private:
+    unsigned long _timeout;
+    unsigned long _lastFeedTime;
+    bool _initialized;
+};
+
+#endif // WATCHDOG_H// WRO2025_Nano.ino
+// Main application for WRO 2025 Nano controller
+
+// Include standard libraries
+#include <NewPing.h>
+#include <Servo.h>
+#include <Wire.h>
+
+// Include project configuration
+#include "config.h"
+
+// Include all module headers
+#include "imu_handler.h"
+#include "us_sensor_array.h"
+#include "motor_controller.h"
+#include "servo_controller.h"
+#include "serial_protocol.h"
+#include "serial_parser.h"
+#include "watchdog.h"
+#include "e_stop.h"
+
+// --- Module instances ---
+IMUHandler imuHandler;
+USSensorArray usSensorArray;
+MotorController motorController;
+ServoController servoController;
+SerialParser serialParser;
+Watchdog watchdog;
+EStopHandler eStopHandler;
+
+// --- Global State variables ---
+bool isStarted = false;         // Has the START button been pressed?
+bool missionGoReceived = false; // Has the Pi sent the "GO" command?
+unsigned long lastUSTime = 0;
+unsigned long lastIMUTime = 0;
+int motorSpeed = 0;
+int servoAngle = SERVO_CENTER_ANGLE;
+unsigned long lastHighSpeedSensorTime = 0;
+const unsigned long HIGH_SPEED_SENSOR_INTERVAL = 50; // Send combined data every 50ms (20 Hz)
+
+// Sensor data structures
+IMUData currentIMUData;
+USSensorData currentUSData;
+
+// --- Function prototypes (good practice for Arduino IDE) ---
+void processSerialCommands();
+
+void setup()
+{
+    // Initialize serial communication
+    Serial.begin(SERIAL_BAUD_RATE);
+
+    // Initialize all modules
+    imuHandler.initialize();
+    usSensorArray.initialize(
+        US_FRONT_TRIG_PIN, US_FRONT_ECHO_PIN,
+        US_RIGHT_TRIG_PIN, US_RIGHT_ECHO_PIN,
+        US_BACK_TRIG_PIN, US_BACK_ECHO_PIN,
+        US_LEFT_TRIG_PIN, US_LEFT_ECHO_PIN);
+
+    motorController.initialize(MOTOR_ENA_PIN, MOTOR_IN1_PIN, MOTOR_IN2_PIN);
+    servoController.initialize(SERVO_PIN);
+
+    watchdog.initialize(WATCHDOG_TIMEOUT);
+    eStopHandler.initialize();
+
+    // Setup start button with internal pull-up
+    pinMode(START_BUTTON_PIN, INPUT_PULLUP);
+
+    // Setup status LED
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    digitalWrite(STATUS_LED_PIN, LOW);
+
+    // Small delay to allow sensors to stabilize
+    delay(100);
+
+    // Calibrate IMU (this will take some time)
+    // In a competition setting, you might want to do this during preparation time
+    // rather than during the setup phase
+    imuHandler.calibrate();
+
+    // Indicate setup complete
+    digitalWrite(STATUS_LED_PIN, HIGH);
+    delay(100);
+    digitalWrite(STATUS_LED_PIN, LOW);
+    // Reset timers to start fresh after setup indication
+    lastUSTime = millis();
+    lastIMUTime = millis();
+    lastHighSpeedSensorTime = millis();
+}
+
+void loop()
+{
+    // --- PRE-START PHASE ---
+    // Wait for the physical start button press
+    if (!isStarted)
+    {
+        // Continuously process commands (e.g., heartbeat to keep watchdog happy)
+        processSerialCommands();
+
+        // Check for the physical start button press
+        if (digitalRead(START_BUTTON_PIN) == LOW)
+        {              // Assuming pull-up, LOW = pressed
+            delay(20); // Debounce
+            if (digitalRead(START_BUTTON_PIN) == LOW)
+            { // Check again after debounce
+                Serial.println("Nano: Physical START button pressed and debounced.");
+                isStarted = true;
+                digitalWrite(STATUS_LED_PIN, HIGH); // Visual confirmation
+
+                // Send start acknowledgment to Pi
+                serialParser.sendStartAck(true);
+
+                // Reset timestamps for immediate sensor reads on start
+                lastUSTime = millis();
+                lastIMUTime = millis();
+                lastHighSpeedSensorTime = millis();
+
+                // Do not 'return' here, let the loop continue to the operational phase
+                // The state change (isStarted = true) will take effect next iteration
+            }
+        }
+        // If not started, ONLY processSerialCommands and check button
+        return; // Exit loop early, wait for next iteration
+    }
+
+    // --- OPERATIONAL PHASE (isStarted == true) ---
+
+    // 1. Process incoming serial commands (Priority 1: React to commands immediately)
+    processSerialCommands();
+
+    // 2. Wait for explicit GO command from Pi before doing main tasks
+    if (!missionGoReceived)
+    {
+        // We are started (button pressed) but waiting for Pi's GO signal.
+        // Only processSerialCommands and watchdog (for safety) are active.
+        // Check watchdog even in this state to catch communication loss immediately
+        if (watchdog.isExpired())
+        {
+            eStopHandler.activateEStop();
+        }
+        delay(10); // Small delay to prevent busy-waiting
+        return;    // Do not proceed with sensors/actuators until GO received
+    }
+
+    // --- MAIN OPERATIONAL LOOP (runs only AFTER missionGoReceived == true) ---
+    unsigned long currentTime = millis();
+
+    // 3. Read sensors at defined intervals
+    // Read ultrasonic sensors
+    if (currentTime - lastUSTime > US_MEASURE_INTERVAL)
+    {
+        if (usSensorArray.readData(currentUSData))
+        {
+            // Optional: Send individual US updates if needed by Pi logic frequently
+            // serialParser.sendSensorData(...);
+        }
+        lastUSTime = currentTime;
+    }
+
+    // Read IMU data (more frequently than US sensors if needed, but we send combined)
+    if (currentTime - lastIMUTime > 50)
+    {                                        // e.g., 20Hz
+        imuHandler.readData(currentIMUData); // Result stored in currentIMUData
+        lastIMUTime = currentTime;
+    }
+
+    // Send ALL sensor data together at high speed
+    if (currentTime - lastHighSpeedSensorTime > HIGH_SPEED_SENSOR_INTERVAL)
+    {
+        // Prepare the compact data structure
+        CompactSensorData compactData;
+
+        // Fill US data (convert from unsigned int to uint16_t)
+        compactData.frontDistance = static_cast<uint16_t>(currentUSData.frontDistance);
+        compactData.rightDistance = static_cast<uint16_t>(currentUSData.rightDistance);
+        compactData.backDistance = static_cast<uint16_t>(currentUSData.backDistance);
+        compactData.leftDistance = static_cast<uint16_t>(currentUSData.leftDistance);
+
+        // Fill IMU data (scale floats to integers for compact transmission)
+        compactData.accelX = static_cast<int16_t>(currentIMUData.accelX * 1000.0f); // Convert g to milli-g
+        compactData.accelY = static_cast<int16_t>(currentIMUData.accelY * 1000.0f);
+        compactData.accelZ = static_cast<int16_t>(currentIMUData.accelZ * 1000.0f);
+        compactData.gyroX = static_cast<int16_t>(currentIMUData.gyroX * 1000.0f); // Convert deg/s to milli-deg/s
+        compactData.gyroY = static_cast<int16_t>(currentIMUData.gyroY * 1000.0f);
+        compactData.gyroZ = static_cast<int16_t>(currentIMUData.gyroZ * 1000.0f);
+        Serial.println("Nano: Sending CMD_ALL_SENSOR_DATA_COMPACT packet.");
+        // --- END ADD ---
+        // Send the compact data packet - This is the FASTEST way
+        serialParser.sendCompactSensorData(compactData);
+
+        lastHighSpeedSensorTime = currentTime;
+    }
+
+    // 4. Update actuators with current values (only if e-stop is not active)
+    if (!eStopHandler.isEStopActive())
+    {
+        motorController.setSpeed(motorSpeed);
+        servoController.setAngle(servoAngle);
+    }
+
+    // 5. Check watchdog (Priority: Safety)
+    if (watchdog.isExpired())
+    {
+        eStopHandler.activateEStop();
+    }
+
+    // Small delay to prevent overwhelming the system
+    delay(5);
+}
+
+// --- Function Definitions ---
+
+// Function to process incoming serial commands
+void processSerialCommands()
+{
+    Packet packet;
+
+    // Try to read a packet
+    if (serialParser.readPacket(packet))
+    {
+        // Process valid packet
+        switch (packet.command)
+        {
+        case CMD_SET_MOTOR_SPEED:
+            if (packet.length >= 1)
+            {
+                // Convert byte to signed int (-128 to 127 mapped to -255 to 255)
+                int8_t speedByte = (int8_t)packet.data[0];
+                motorSpeed = map(speedByte, -128, 127, -MOTOR_MAX_SPEED, MOTOR_MAX_SPEED);
+
+                // Feed watchdog when receiving motor commands
+                watchdog.feed();
+            }
+            break;
+
+        case CMD_SET_SERVO_ANGLE:
+            if (packet.length >= 1)
+            {
+                servoAngle = packet.data[0];
+                if (servoAngle > SERVO_MAX_ANGLE)
+                    servoAngle = SERVO_MAX_ANGLE;
+                if (servoAngle < SERVO_MIN_ANGLE)
+                    servoAngle = SERVO_MIN_ANGLE;
+
+                // Feed watchdog when receiving servo commands
+                watchdog.feed();
+            }
+            break;
+
+        case CMD_EMERGENCY_STOP:
+            eStopHandler.activateEStop();
+            break;
+
+        case CMD_HEARTBEAT:
+            // Feed the watchdog on heartbeat
+            watchdog.feed();
+            break;
+
+        case CMD_REQUEST_SENSOR_DATA:
+            // Send current US sensor data (consider adding IMU if needed separately)
+            serialParser.sendSensorData(
+                currentUSData.frontDistance,
+                currentUSData.rightDistance,
+                currentUSData.backDistance,
+                currentUSData.leftDistance);
+            break;
+
+        case CMD_PI_GO_SIGNAL:
+            // Pi signals the start of the mission run
+            if (isStarted)
+            { // Only accept GO if button was pressed first (Rule 9.11)
+                missionGoReceived = true;
+                Serial.println("Nano: CMD_PI_GO_SIGNAL received, missionGoReceived = true.");
+                // Optional: Send an ack back to Pi confirming GO received
+                // serialParser.sendAck(CMD_PI_GO_SIGNAL); // You'd need to implement sendAck
+                // Blink LED quickly to indicate GO
+                digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+                delay(50);
+                digitalWrite(STATUS_LED_PIN, HIGH); // Ensure LED stays on
+            }
+            else
+            {
+                // GO received before button press - protocol error
+                serialParser.sendError(0x02); // Define error code, e.g., "GO before START"
+            }
+            break;
+
+        default:
+            // Unknown command, send error
+            serialParser.sendError(0x01); // Unknown command error
+            break;
+        }
+    }
+}arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/WRO2025_Nano$ 
+

@@ -80,7 +80,7 @@ COLORS = {
 
 # --- Logging ---
 # Basic logging configuration can be set up later
-LOG_LEVEL = os.environ.get("WRO_LOG_LEVEL", "INFO") # Can be DEBUG, INFO, WARNING, ERROR
+LOG_LEVEL = os.environ.get("WRO_LOG_LEVEL", "DEBUG") # Can be DEBUG, INFO, WARNING, ERROR
 
 # --- Parking ---
 # Placeholder for parking parameters, likely determined dynamically

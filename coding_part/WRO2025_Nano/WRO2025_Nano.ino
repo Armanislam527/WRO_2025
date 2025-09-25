@@ -77,7 +77,7 @@ void setup()
     // Calibrate IMU (this will take some time)
     // In a competition setting, you might want to do this during preparation time
     // rather than during the setup phase
-    // imuHandler.calibrate();
+    imuHandler.calibrate();
 
     // Indicate setup complete
     digitalWrite(STATUS_LED_PIN, HIGH);
@@ -104,6 +104,7 @@ void loop()
             delay(20); // Debounce
             if (digitalRead(START_BUTTON_PIN) == LOW)
             { // Check again after debounce
+                Serial.println("Nano: Physical START button pressed and debounced.");
                 isStarted = true;
                 digitalWrite(STATUS_LED_PIN, HIGH); // Visual confirmation
 
@@ -183,7 +184,8 @@ void loop()
         compactData.gyroX = static_cast<int16_t>(currentIMUData.gyroX * 1000.0f); // Convert deg/s to milli-deg/s
         compactData.gyroY = static_cast<int16_t>(currentIMUData.gyroY * 1000.0f);
         compactData.gyroZ = static_cast<int16_t>(currentIMUData.gyroZ * 1000.0f);
-
+        Serial.println("Nano: Sending CMD_ALL_SENSOR_DATA_COMPACT packet.");
+        // --- END ADD ---
         // Send the compact data packet - This is the FASTEST way
         serialParser.sendCompactSensorData(compactData);
 
@@ -269,6 +271,7 @@ void processSerialCommands()
             if (isStarted)
             { // Only accept GO if button was pressed first (Rule 9.11)
                 missionGoReceived = true;
+                Serial.println("Nano: CMD_PI_GO_SIGNAL received, missionGoReceived = true.");
                 // Optional: Send an ack back to Pi confirming GO received
                 // serialParser.sendAck(CMD_PI_GO_SIGNAL); // You'd need to implement sendAck
                 // Blink LED quickly to indicate GO

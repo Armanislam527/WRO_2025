@@ -4,7 +4,6 @@
 #include "camera_interface.h"
 #include <iostream>
 #include <chrono>
-#include <fcntl.h>
 #include <thread>
 #include <sstream>           // For building command string
 #include <unistd.h>          // For ::sleep (if needed for startup delay)
@@ -19,7 +18,6 @@ CameraInterface::CameraInterface()
       isInitialized(false), isCapturing(false),
       stopCaptureFlag(false), previous_byte(0)
 {
-    // Constructor initializes atomic flags and member variables
     frameBuffer = std::make_shared<FrameBuffer>();
     LOG_DEBUG("CameraInterface: Constructed.");
 }
@@ -49,12 +47,6 @@ bool CameraInterface::initialize(const std::string &device, int width, int heigh
     cameraCommand = "";      // Ensure it's empty before building
 
     // --- BUILD THE rpicam-vid COMMAND ---
-    // --inline: Embeds JPEG headers in each frame for easier decoding
-    // --timeout 0: Run indefinitely
-    // --nopreview: Suppress on-screen preview
-    // --codec mjpeg: Output Motion JPEG stream
-    // --width/--height/--framerate: Set capture parameters
-    // --output - : Output to stdout (which we will read)
     std::ostringstream cmdStream;
     cmdStream << "rpicam-vid --inline --timeout 0 --nopreview";
     cmdStream << " --codec mjpeg"; // MJPEG is good for streaming and OpenCV decoding
@@ -65,9 +57,6 @@ bool CameraInterface::initialize(const std::string &device, int width, int heigh
 
     cameraCommand = cmdStream.str();
     LOG_INFO("CameraInterface: Prepared command: " << cameraCommand);
-
-    // Test if rpicam-vid command exists (optional but good practice)
-    // You could run 'which rpicam-vid' or try opening the process and checking.
 
     isInitialized.store(true);
     LOG_INFO("CameraInterface: Initialization marked as successful.");
@@ -100,46 +89,12 @@ bool CameraInterface::startCapture()
         isInitialized.store(false); // Mark as failed to initialize properly
         return false;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    // Check if the process is still running using feof/ferror on a non-blocking read attempt
-    // A more robust way is to use waitpid with WNOHANG, but this is simpler for now.
-    int fd = fileno(cameraProcess); // Get file descriptor
-    if (fd != -1)
-    {
-        // Set file descriptor to non-blocking
-        int flags = fcntl(fd, F_GETFL, 0);
-        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    LOG_INFO("CameraInterface: rpicam-vid process started successfully.");
 
-        char dummy;
-        ssize_t result = read(fd, &dummy, 1); // Try a non-blocking read
-        if (result == 0)
-        { // EOF immediately means process exited
-            LOG_ERROR("CameraInterface: rpicam-vid process exited immediately after start (EOF). Check command or camera access.");
-            pclose(cameraProcess); // Clean up
-            cameraProcess = nullptr;
-            isInitialized.store(false);
-            return false;
-        }
-        else if (result < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
-        { // Real read error
-            LOG_ERROR("CameraInterface: Error checking rpicam-vid process health: " << strerror(errno));
-            pclose(cameraProcess);
-            cameraProcess = nullptr;
-            isInitialized.store(false);
-            return false;
-        }
-        // If result > 0 or EAGAIN/EWOULDBLOCK, process seems healthy for now
-        // Reset file descriptor to blocking (fread handles blocking)
-        fcntl(fd, F_SETFL, flags);
-    }
-    else
-    {
-        LOG_WARN("CameraInterface: Could not get file descriptor for rpicam-vid process for health check.");
-    }
     isCapturing.store(true);
     captureThread = std::thread(&CameraInterface::captureLoop, this);
 
-    LOG_INFO("CameraInterface: rpicam-vid process started successfully.");
+    LOG_INFO("CameraInterface initialized and capturing.");
     return true;
 }
 
@@ -195,23 +150,29 @@ void CameraInterface::captureLoop()
 
     const size_t BUFFER_SIZE = 1024 * 1024; // 1MB buffer
     std::vector<uint8_t> buffer(BUFFER_SIZE);
-    std::vector<uint8_t> jpegData;
+    std::vector<uint8_t> jpegData; // To accumulate JPEG data
 
-    // Simple state machine for JPEG parsing
+    // Simple state machine to find JPEG SOI (0xFFD8) and EOI (0xFFD9)
     enum class JpegState
     {
         FIND_SOI,
-        ACCUMULATE
+        ACCUMULATE,
+        FOUND_EOI
     };
     JpegState state = JpegState::FIND_SOI;
+    const uint8_t SOI_MARKER[] = {0xFF, 0xD8};
+    const uint8_t EOI_MARKER[] = {0xFF, 0xD9};
 
-    // Keep track of the previous byte for marker detection
-    uint8_t previousByte = 0;
+    // Reset parser state at the beginning
+    previous_byte = 0;
+    jpegData.clear();
+    state = JpegState::FIND_SOI;
 
     while (!stopCaptureFlag.load())
     {
         LOG_VERBOSE("CameraInterface: captureLoop iteration started.");
 
+        // --- READ DATA FROM rpicam-vid ---
         size_t bytesRead = fread(buffer.data(), sizeof(uint8_t), BUFFER_SIZE, cameraProcess);
 
         if (bytesRead == 0)
@@ -219,87 +180,122 @@ void CameraInterface::captureLoop()
             if (feof(cameraProcess))
             {
                 LOG_WARN("CameraInterface: rpicam-vid stream ended (EOF).");
-                // cameraAcquisitionFailed = true;
-                break;
+                break; // Exit loop if stream ends
             }
             if (ferror(cameraProcess))
             {
                 LOG_ERROR("CameraInterface: Error reading from rpicam-vid stream.");
-                clearerr(cameraProcess);
+                clearerr(cameraProcess); // Clear error flag and try again
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 continue;
             }
+            // If bytesRead is 0 but no error/EOF, just try again quickly
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
+        LOG_DEBUG("CameraInterface: Read " << bytesRead << " bytes from rpicam-vid.");
 
-        LOG_VERBOSE("CameraInterface: Read " << bytesRead << " bytes from rpicam-vid.");
-
+        // --- PROCESS THE READ DATA TO EXTRACT JPEG FRAMES ---
         for (size_t i = 0; i < bytesRead; ++i)
         {
-            uint8_t currentByte = buffer[i];
-            LOG_VERBOSE("Processing byte " << i << ", value 0x" << std::hex << static_cast<int>(currentByte) << std::dec);
+            uint8_t byte = buffer[i];
+            LOG_VERBOSE("Processing byte " << i << ", value 0x" << std::hex << static_cast<int>(byte) << std::dec);
 
             switch (state)
             {
             case JpegState::FIND_SOI:
                 LOG_VERBOSE("State: FIND_SOI");
-                // Look for SOI marker (0xFFD8)
-                if (previousByte == 0xFF && currentByte == 0xD8)
+                // Look for the start of a JPEG image (0xFFD8)
+                // Handle potential 0xFF stuffing (0xFF00 -> 0xFF)
+                if (previous_byte == SOI_MARKER[0])
                 {
-                    LOG_DEBUG("Found SOI (0xFFD8)");
-                    jpegData.clear();
-                    jpegData.push_back(0xFF);
-                    jpegData.push_back(0xD8);
-                    state = JpegState::ACCUMULATE;
+                    if (byte == 0xD8)
+                    {
+                        // Found SOI (0xFFD8)
+                        LOG_DEBUG("Found SOI (0xFFD8)");
+                        jpegData.clear();
+                        jpegData.push_back(0xFF);
+                        jpegData.push_back(0xD8);
+                        state = JpegState::ACCUMULATE;
+                    }
+                    // else if (byte == 0x00) {
+                    //     // Stuffed 0xFF, ignore the 0x00
+                    //     // previous_byte remains 0xFF for next comparison
+                    // }
+                    // else {
+                    //     // Unexpected byte after 0xFF, treat as normal byte
+                    //     previous_byte = byte;
+                    // }
                 }
                 else
                 {
-                    // Update previous byte for next iteration
-                    previousByte = currentByte;
+                    // Keep the last byte to check for SOI in next iteration
+                    previous_byte = byte;
                 }
                 break;
 
             case JpegState::ACCUMULATE:
                 LOG_VERBOSE("State: ACCUMULATE (size: " << jpegData.size() << ")");
-                jpegData.push_back(currentByte);
-
-                // Check for EOI marker (0xFFD9)
+                jpegData.push_back(byte);
+                // Check for potential EOI marker (0xFFD9)
                 // We need at least 2 bytes to check the last two
-                if (jpegData.size() >= 2 &&
-                    jpegData[jpegData.size() - 2] == 0xFF &&
-                    jpegData[jpegData.size() - 1] == 0xD9)
+                if (jpegData.size() >= 2)
                 {
-                    LOG_DEBUG("CameraInterface: Found EOI (0xFFD9). JPEG size: " << jpegData.size() << " bytes.");
-                    // Check if the last two bytes are 0xFFD9
+                    // Check if the last two bytes are EOI (0xFFD9)
+                    if (jpegData[jpegData.size() - 2] == EOI_MARKER[0] &&
+                        jpegData[jpegData.size() - 1] == EOI_MARKER[1])
+                    {
+                        LOG_DEBUG("Found EOI (0xFFD9). JPEG size: " << jpegData.size() << " bytes.");
+                        state = JpegState::FOUND_EOI;
+                    }
+                }
+                // Always update previous byte in ACCUMULATE state
+                previous_byte = byte;
+                break;
+
+            case JpegState::FOUND_EOI:
+                LOG_INFO("Complete JPEG frame candidate found (size: " << jpegData.size() << " bytes). Attempting decode...");
+                // We have a complete JPEG in jpegData
+                {
+                    // --- DECODE JPEG TO cv::Mat ---
+                    // Create a cv::Mat header for the JPEG data
                     cv::Mat jpegMat(1, jpegData.size(), CV_8UC1, jpegData.data());
+                    LOG_DEBUG("Created cv::Mat header for JPEG data (size: " << jpegData.size() << " bytes).");
+                    // Use cv::imdecode to decode the JPEG data into a BGR Mat
                     cv::Mat frame = cv::imdecode(jpegMat, cv::IMREAD_COLOR);
+                    LOG_DEBUG("cv::imdecode called.");
 
                     if (frame.empty())
                     {
-                        LOG_WARN("Failed to decode JPEG frame (size: " << jpegData.size() << " bytes).");
+                        LOG_WARN("Failed to decode JPEG frame (size: " << jpegData.size() << " bytes). Data might be corrupt.");
                     }
                     else
                     {
-                        LOG_DEBUG("CameraInterface: Successfully decoded JPEG frame (size: " << frame.cols << "x" << frame.rows << ").");
-                        frameBuffer->putFrame(frame);
-                        LOG_INFO("Put decoded frame into FrameBuffer.");
+                        LOG_INFO("Successfully decoded JPEG frame (size: " << frame.cols << "x" << frame.rows << ").");
+                        // --- STORE THE DECODED FRAME IN THE BUFFER ---
+                        if (frameBuffer)
+                        {
+                            frameBuffer->putFrame(frame);
+                            LOG_INFO("Put decoded frame into FrameBuffer.");
+                        }
+                        else
+                        {
+                            LOG_ERROR("FrameBuffer is null. Cannot put frame.");
+                        }
                     }
-
-                    // Clear jpegData for the next frame
-                    jpegData.clear();
-                    state = JpegState::FIND_SOI;
-                    // Reset previousByte to 0 to start fresh search for SOI
-                    previousByte = 0;
                 }
-            }
-            // Always update previous byte in ACCUMULATE state
-            previousByte = currentByte;
-            break;
-        } // End for (processing bytes)
-
+                // Reset state and buffer for the next frame
+                jpegData.clear();
+                state = JpegState::FIND_SOI;
+                // Push the current byte back to start checking for next SOI
+                // This handles the case where SOI could start immediately after EOI
+                previous_byte = byte;
+                break;
+            } // End switch(state)
+        } // End for(bytesRead)
         LOG_VERBOSE("Finished processing chunk of " << bytesRead << " bytes.");
     } // End while loop
 
     LOG_INFO("CameraInterface: captureLoop thread exiting.");
 }
+// --- END OF CAPTURE LOOP ---

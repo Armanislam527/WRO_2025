@@ -126,6 +126,8 @@ class SerialHandler:
         while not self._stop_receiving.is_set():
             try:
                 if self.serial_conn and self.serial_conn.in_waiting > 0:
+                    bytes_available = self.serial_conn.in_waiting
+                    logger.debug(f"SerialHandler: Bytes available to read: {bytes_available}")
                     raw_data = self.serial_conn.read(self.serial_conn.in_waiting)
                     if raw_data:
                         logger.debug(f"SerialHandler: Received {len(raw_data)} bytes.") # Add this line
@@ -139,16 +141,16 @@ class SerialHandler:
             except serial.SerialException as e:
                 logger.error(f"Serial read error: {e}")
                 if "device disconnected" in str(e).lower():
-                     logger.error("Serial device appears disconnected. Stopping receive loop.")
-                     break
+                    logger.error("Serial device appears disconnected. Stopping receive loop.")
+                    break
             except Exception as e:
-                 logger.error(f"Unexpected error in receive loop: {e}", exc_info=True)
-                 
-        logger.debug("Serial receive loop stopped.")
+                logger.error(f"Unexpected error in receive loop: {e}", exc_info=True)
+
+        logger.debug("SerialHandler: Serial receive loop stopped.")
 
     def _process_byte(self, incoming_byte: int):
         """Process a single incoming byte according to the state machine."""
-        # logger.debug(f"Processing byte: 0x{incoming_byte:02X}, State: {self._parse_state}")
+        logger.debug(f"SerialHandler: Processing byte: 0x{incoming_byte:02X}, State: {self._parse_state}")
         if self._parse_state == "IDLE":
             if incoming_byte == PACKET_START_BYTE:
                 logger.debug(f"SerialHandler: Found packet start byte 0xAA") # Add this line
@@ -157,18 +159,19 @@ class SerialHandler:
 
         elif self._parse_state == "COMMAND_RECEIVED":
             self._current_command = incoming_byte
+            logger.debug(f"SerialHandler: Received command byte: 0x{self._current_command:02X}")
             self._parse_state = "LENGTH_RECEIVED"
 
         elif self._parse_state == "LENGTH_RECEIVED":
             self._current_length = incoming_byte
             self._data_bytes_received = 0
             self._rx_buffer.clear() # Clear buffer for new data
-            
+            logger.debug(f"SerialHandler: Received length byte: {self._current_length}")
             if self._current_length == 0:
                 self._parse_state = "DATA_RECEIVED" # No data, go straight to checksum
             elif self._current_length > PACKET_MAX_LENGTH:
-                 logger.warning(f"Packet length {self._current_length} exceeds maximum {PACKET_MAX_LENGTH}. Discarding.")
-                 self._parse_state = "IDLE" # Reset state
+                logger.warning(f"Packet length {self._current_length} exceeds maximum {PACKET_MAX_LENGTH}. Discarding.")
+                self._parse_state = "IDLE" # Reset state
             else:
                 self._parse_state = "RECEIVING_DATA"
 
@@ -177,13 +180,14 @@ class SerialHandler:
                 self._rx_buffer.append(incoming_byte)
                 self._data_bytes_received += 1
                 if self._data_bytes_received == self._current_length:
+                    logger.debug(f"SerialHandler: All {self._current_length} data bytes received.")
                     self._parse_state = "DATA_RECEIVED"
             # else: Ignore extra bytes if we somehow receive more than length
 
         elif self._parse_state == "DATA_RECEIVED":
             # incoming_byte is the checksum
             received_checksum = incoming_byte
-            
+            logger.debug(f"SerialHandler: Checksum byte received: 0x{received_checksum:02X}")
             # Prepare packet for checksum calculation: [START][CMD][LEN][DATA...]
             packet_for_checksum = bytearray([PACKET_START_BYTE, self._current_command, self._current_length])
             packet_for_checksum.extend(self._rx_buffer)
@@ -192,25 +196,27 @@ class SerialHandler:
             calculated_checksum = 0
             for b in packet_for_checksum:
                 calculated_checksum ^= b
-            
+            logger.debug(f"SerialHandler: Calculated checksum: 0x{calculated_checksum:02X}")
             if calculated_checksum == received_checksum:
                 # Valid packet, handle it
-                self._handle_valid_packet(self._current_command, self._rx_buffer)
+                logger.debug(f"SerialHandler: Valid packet received: CMD=0x{self._current_command:02X}, LEN={self._current_length}")
+                self._handle_valid_packet(self._current_command, bytes(self._rx_buffer))
             else:
-                logger.warning(f"Checksum mismatch for command 0x{self._current_command:02X}. Packet discarded.")
+                logger.warning(f"SerialHandler: Checksum mismatch for command 0x{self._current_command:02X}. Packet discarded.(Rxd:0x{received_checksum:02X}, Calc:0x{calculated_checksum:02X})")
             
             # Reset parser state regardless of checksum validity
             self._parse_state = "IDLE"
             self._rx_buffer.clear()
+            self._data_bytes_received = 0
 
     def _handle_valid_packet(self, command: int, data_bytes: bytes):
         """Handle a received packet with a valid checksum."""
-        # logger.debug(f"Handling valid packet: CMD=0x{command:02X}, LEN={len(data_bytes)}")
+        logger.debug(f"SerialHandler: Handling valid packet: CMD=0x{command:02X}, LEN={len(data_bytes)}")
         
         if command == CMD_START_ACK and len(data_bytes) >= 1:
             started_flag = data_bytes[0]
             if started_flag == 0x01: # C++ sends 0x01 if started
-                logger.info("Received START_ACK (button pressed) from Nano.")
+                logger.info("SerialHandler: Received START_ACK (button pressed) from Nano.")
                 with self._start_ack_lock:
                     self._start_ack_received = True
                 # Trigger callback if set
@@ -218,12 +224,12 @@ class SerialHandler:
                     try:
                         self.on_start_ack_received()
                     except Exception as e:
-                        logger.error(f"Error in on_start_ack_received callback: {e}")
+                        logger.error(f"SerialHandler: Error in on_start_ack_received callback: {e}")
             else:
-                logger.debug(f"Received START_ACK with flag 0x{started_flag:02X} (not started).")
+                logger.debug(f"SerialHandler: Received START_ACK with flag 0x{started_flag:02X} (not started).")
 
         elif command == CMD_ALL_SENSOR_DATA_COMPACT and len(data_bytes) == COMPACT_SENSOR_DATA_SIZE:
-            logger.debug("Received COMPACT_SENSOR_DATA packet.")
+            logger.debug("SerialHandler: Received COMPACT_SENSOR_DATA packet.")
             # The C++ code packs the struct directly. We need to append the checksum byte
             # that was used for internal validation in the unpack function.
             # However, our unpack function expects the full packet including checksum.
@@ -237,6 +243,7 @@ class SerialHandler:
             # Our unpack function should take data_bytes directly.
             sensor_data, is_valid_internal = unpack_compact_sensor_data(data_bytes)
             if is_valid_internal: # Checksum inside the struct data
+                logger.debug(f"SerialHandler: Unpacked sensor data: F={sensor_data.us_data.front_distance:.1f}cm,"f"GX={sensor_data.imu_data.gyro_x:.2f}d/s,"f" GY={sensor_data.imu_data.gyro_y:.2f}d/s,"f" GZ={sensor_data.imu_data.gyro_z:.2f}d/s")
                 with self._data_lock:
                     self._latest_sensor_data = sensor_data
                 # Trigger callback if set
@@ -244,38 +251,38 @@ class SerialHandler:
                     try:
                         self.on_sensor_data_updated(sensor_data)
                     except Exception as e:
-                        logger.error(f"Error in on_sensor_data_updated callback: {e}")
+                        logger.error(f"SerialHandler: Error in on_sensor_data_updated callback: {e}")
             else:
-                logger.warning("Received sensor data packet with invalid internal checksum.")
+                logger.warning("SerialHandler: Received sensor data packet with invalid internal checksum.")
 
         elif command == CMD_ERROR and len(data_bytes) >= 1:
             error_code = data_bytes[0]
-            logger.warning(f"Received ERROR code 0x{error_code:02X} from Nano.")
+            logger.warning(f"SerialHandler: Received ERROR code 0x{error_code:02X} from Nano.")
             with self._error_lock:
                 self._last_error_code = error_code
             if self.on_error_received:
                 try:
                     self.on_error_received(error_code)
                 except Exception as e:
-                    logger.error(f"Error in on_error_received callback: {e}")
+                    logger.error(f"SerialHandler: Error in on_error_received callback: {e}")
 
         elif command == CMD_SENSOR_DATA:
             # Handle standard sensor data packet if needed (not used in C++?)
-            logger.debug(f"Received standard SENSOR_DATA packet (len={len(data_bytes)}). Not implemented handler.")
+            logger.debug(f"SerialHandler: Received standard SENSOR_DATA packet (len={len(data_bytes)}). Not implemented handler.")
         else:
-            logger.debug(f"Received unhandled packet: CMD=0x{command:02X}, LEN={len(data_bytes)}")
+            logger.debug(f"SerialHandler: Received unhandled packet: CMD=0x{command:02X}, LEN={len(data_bytes)}")
 
     # --- Sending Commands ---
 
     def _send_packet(self, command: int, data: bytes = b''):
         """Internal method to create and send a packet."""
         if not self.is_open or not self.serial_conn:
-            logger.warning("Cannot send packet, serial port is not open.")
+            logger.warning("SerialHandler: Cannot send packet, serial port is not open.")
             return False
 
         length = len(data)
         if length > PACKET_MAX_LENGTH:
-            logger.error(f"Data length {length} exceeds maximum ({PACKET_MAX_LENGTH} bytes).")
+            logger.error(f"SerialHandler: Data length {length} exceeds maximum ({PACKET_MAX_LENGTH} bytes).")
             return False
 
         packet = bytearray()
@@ -291,28 +298,29 @@ class SerialHandler:
         packet.append(checksum)
 
         try:
+            logger.debug(f"SerialHandler: Sending packet: START=0xAA, CMD=0x{command:02X}, LEN={length},DATA_SIZE={len(data)}, DATA={data.hex()}, CHECKSUM=0x{checksum:02X}")
             self.serial_conn.write(packet)
             # logger.debug(f"Sent packet: {packet.hex()}")
             return True
         except serial.SerialException as e:
-            logger.error(f"Failed to send packet: {e}")
+            logger.error(f"SerialHandler: Failed to send packet: {e}")
             return False
 
     # --- Public Methods for Sending Commands (Matching C++ names) ---
 
     def sendGoCommand(self) -> bool:
         """Send the Pi's GO command to the Nano."""
-        logger.info("Sending GO command to Nano.")
+        logger.info("SerialHandler: Sending GO command to Nano.")
         return self._send_packet(CMD_PI_GO_SIGNAL)
 
     def sendHeartbeat(self) -> bool:
         """Send a heartbeat packet."""
-        # logger.debug("Sending heartbeat.")
+        logger.debug("SerialHandler: Sending heartbeat.")
         return self._send_packet(CMD_HEARTBEAT)
 
     def sendEmergencyStop(self) -> bool:
         """Send an emergency stop command."""
-        logger.warning("Sending EMERGENCY STOP command to Nano.")
+        logger.warning("SerialHandler: Sending EMERGENCY STOP command to Nano.")
         return self._send_packet(CMD_EMERGENCY_STOP)
 
     def sendMotorSpeedCommand(self, speed: int) -> bool:
@@ -323,8 +331,8 @@ class SerialHandler:
         # Clamp speed to int8_t range
         clamped_speed = max(-128, min(127, speed))
         # Convert signed int to unsigned byte for transmission
-        speed_byte = clamped_speed & 0xFF 
-        logger.debug(f"Sending motor speed command: {speed} (byte: 0x{speed_byte:02X})")
+        speed_byte = clamped_speed & 0xFF
+        logger.debug(f"SerialHandler: Sending motor speed command: {speed} (byte: 0x{speed_byte:02X})")
         return self._send_packet(CMD_SET_MOTOR_SPEED, bytes([speed_byte]))
 
     def sendServoAngleCommand(self, angle: int) -> bool:
@@ -333,12 +341,12 @@ class SerialHandler:
         Angle: uint8_t (0-180).
         """
         clamped_angle = max(0, min(180, angle))
-        logger.debug(f"Sending servo angle command: {angle}")
+        logger.debug(f"SerialHandler: Sending servo angle command: {angle}")
         return self._send_packet(CMD_SET_SERVO_ANGLE, bytes([clamped_angle]))
 
     def requestData(self) -> bool:
         """Request sensor data from Nano (if Nano supports CMD_REQUEST_SENSOR_DATA)."""
-        logger.debug("Requesting sensor data from Nano.")
+        logger.debug("SerialHandler: Requesting sensor data from Nano.")
         return self._send_packet(CMD_REQUEST_SENSOR_DATA)
 
 
@@ -347,17 +355,20 @@ class SerialHandler:
     def getLatestSensorData(self) -> SensorData:
         """Get the latest sensor data received."""
         with self._data_lock:
+            logger.debug(f"SerialHandler: getLatestSensorData called, returning data: F={self._latest_sensor_data.us_data.front_distance:.1f}cm,"f"GX={self._latest_sensor_data.imu_data.gyro_x:.2f}d/s,"f" GY={self._latest_sensor_data.imu_data.gyro_y:.2f}d/s,"f" GZ={self._latest_sensor_data.imu_data.gyro_z:.2f}d/s")
             # Returning reference for now, as in C++
             return self._latest_sensor_data
 
     def hasStartAck(self) -> bool:
         """Check if the START_ACK has been received."""
         with self._start_ack_lock:
+            logger.debug(f"SerialHandler: hasStartAck called, returning {self._start_ack_received}")
             return self._start_ack_received
 
     def acknowledgeStartAck(self):
         """Clear the START_ACK received flag."""
         with self._start_ack_lock:
+            logger.debug(f"SerialHandler: acknowledgeStartAck called, clearing flag: {self._start_ack_received}")
             self._start_ack_received = False
         logger.debug("START_ACK acknowledged and cleared.")
 

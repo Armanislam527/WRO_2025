@@ -1,0 +1,3622 @@
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part$ cd wro2025_vehicle_python/ arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle_python$ ls -la
+total 64
+drwxrwxr-x 10 arman arman  4096 Sep 23 16:01 .
+drwxrwxr-x  8 arman arman  4096 Sep 24 17:05 ..
+drwxrwxr-x  2 arman arman  4096 Sep 23 16:01 actuators
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:39 communication
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:36 config
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:59 control
+-rw-rw-r--  1 arman arman 20240 Sep 24 18:19 main.py
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:58 navigation
+-rw-rw-r--  1 arman arman    75 Sep 23 15:39 requirements.txt
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:36 sensors
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:43 utils
+drwxrwxr-x  2 arman arman  4096 Sep 23 16:08 vision
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle_python$ ls -la */
+actuators/:
+total 20
+drwxrwxr-x  2 arman arman  4096 Sep 23 16:01 .
+drwxrwxr-x 10 arman arman  4096 Sep 23 16:01 ..
+-rw-rw-r--  1 arman arman 10747 Sep 23 18:41 vehicle_controller.py
+
+communication/:
+total 28
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:39 .
+drwxrwxr-x 10 arman arman  4096 Sep 23 16:01 ..
+-rw-rw-r--  1 arman arman 19352 Sep 24 02:40 serial_handler.py
+
+config/:
+total 12
+drwxrwxr-x  2 arman arman 4096 Sep 23 15:36 .
+drwxrwxr-x 10 arman arman 4096 Sep 23 16:01 ..
+-rw-rw-r--  1 arman arman 3094 Sep 24 06:40 vehicle_config.py
+
+control/:
+total 32
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:59 .
+drwxrwxr-x 10 arman arman  4096 Sep 23 16:01 ..
+-rw-rw-r--  1 arman arman  1472 Sep 23 15:59 navigation_command.py
+-rw-rw-r--  1 arman arman 19178 Sep 23 19:32 path_planner.py
+
+navigation/:
+total 40
+drwxrwxr-x  2 arman arman  4096 Sep 23 15:58 .
+drwxrwxr-x 10 arman arman  4096 Sep 23 16:01 ..
+-rw-rw-r--  1 arman arman  9090 Sep 23 16:33 lap_counter.py
+-rw-rw-r--  1 arman arman  6052 Sep 23 19:29 mission_state.py
+-rw-rw-r--  1 arman arman 12253 Sep 23 16:11 positional_memory.py
+
+sensors/:
+total 20
+drwxrwxr-x  2 arman arman 4096 Sep 23 15:36 .
+drwxrwxr-x 10 arman arman 4096 Sep 23 16:01 ..
+-rw-rw-r--  1 arman arman 8424 Sep 23 15:38 sensor_data.py
+
+utils/:
+total 12
+drwxrwxr-x  2 arman arman 4096 Sep 23 15:43 .
+drwxrwxr-x 10 arman arman 4096 Sep 23 16:01 ..
+-rw-rw-r--  1 arman arman 1439 Sep 24 06:45 logger.py
+
+vision/:
+total 68
+drwxrwxr-x  2 arman arman  4096 Sep 23 16:08 .
+drwxrwxr-x 10 arman arman  4096 Sep 23 16:01 ..
+-rw-rw-r--  1 arman arman  9107 Sep 24 20:19 camera_interface.py
+-rw-rw-r--  1 arman arman  8100 Sep 23 16:07 color_detector.py
+-rw-rw-r--  1 arman arman  6515 Sep 23 16:08 edge_detector.py
+-rw-rw-r--  1 arman arman  2219 Sep 24 06:21 frame_buffer.py
+-rw-rw-r--  1 arman arman 13034 Sep 24 15:36 image_processor.py
+-rw-rw-r--  1 arman arman     0 Sep 23 15:50 init__.py
+-rw-rw-r--  1 arman arman  9249 Sep 23 15:53 vision_snapshot.py
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle_python$ cat *
+cat: actuators: Is a directory
+cat: communication: Is a directory
+cat: config: Is a directory
+cat: control: Is a directory
+# main.py (Refined and Integrated with Internal Exception Handling)
+"""Main application entry point for the WRO 2025 Vehicle (Python version)."""
+
+import signal
+import sys
+import time
+import logging
+import argparse
+
+# Import our modules
+import utils.logger
+import config.vehicle_config as cfg
+from communication.serial_handler import SerialHandler
+from sensors.sensor_data import SensorData
+from navigation.mission_state import MissionState, ChallengeType, MissionPhase
+from navigation.lap_counter import LapCounter
+from navigation.positional_memory import PositionalMemory
+# --- Import Vision Modules ---
+from vision.frame_buffer import FrameBuffer
+from vision.camera_interface import CameraInterface
+from vision.image_processor import ImageProcessor
+# --- --- ---
+from control.path_planner import PathPlanner
+from control.navigation_command import NavigationCommand, NavigationAction
+from actuators.vehicle_controller import VehicleController
+
+# --- Global State ---
+shutdown_requested = False
+
+def signal_handler(sig, frame):
+    """Handle Ctrl+C gracefully."""
+    global shutdown_requested
+    print("\n[Main] Shutdown signal received (Ctrl+C).")
+    shutdown_requested = True
+
+def initialize_system() -> dict:
+    """
+    Initialize all system components.
+    Returns:
+        dict: A dictionary containing initialized module instances, or None on failure.
+    """
+    print("[Main] Initializing system...")
+    modules = {}
+
+    try:
+        utils.logger.setup_logging()
+        logger = logging.getLogger(__name__)
+        logger.info("Main application starting.")
+
+        # 1. Serial Handler
+        serial_handler = SerialHandler(cfg.SERIAL_PORT, cfg.SERIAL_BAUDRATE)
+        if not serial_handler.open():
+            logger.error("Failed to open serial port. Exiting.")
+            return None
+        modules['serial_handler'] = serial_handler
+        logger.info("Serial handler initialized.")
+
+        # 2. Mission State
+        mission_state = MissionState()
+        modules['mission_state'] = mission_state
+        logger.info("Mission state initialized.")
+
+        # 3. Lap Counter
+        lap_counter = LapCounter()
+        if not lap_counter.initialize():
+             logger.error("Failed to initialize LapCounter. Exiting.")
+             return None
+        modules['lap_counter'] = lap_counter
+        logger.info("Lap counter initialized.")
+
+        # 4. Positional Memory
+        positional_memory = PositionalMemory()
+        modules['positional_memory'] = positional_memory
+        logger.info("Positional memory initialized.")
+
+        # 5. Path Planner (depends on LapCounter)
+        path_planner = PathPlanner()
+        if not path_planner.initialize(lap_counter):
+            logger.error("Failed to initialize PathPlanner. Exiting.")
+            return None
+        modules['path_planner'] = path_planner
+        logger.info("Path planner initialized.")
+
+        # 6. Vehicle Controller (depends on SerialHandler)
+        vehicle_controller = VehicleController(serial_handler)
+        modules['vehicle_controller'] = vehicle_controller
+        logger.info("Vehicle controller initialized.")
+
+        # 7. Vision System
+        frame_buffer = FrameBuffer(maxsize=5) # Reasonable buffer size
+        camera_interface = CameraInterface(frame_buffer)
+        image_processor = ImageProcessor(frame_buffer)
+        
+        if not image_processor.initialize():
+             logger.error("Failed to initialize ImageProcessor. Exiting.")
+             return None
+
+        modules['frame_buffer'] = frame_buffer
+        modules['camera_interface'] = camera_interface
+        modules['image_processor'] = image_processor
+        logger.info("Vision system initialized.")
+
+        logger.info("System initialization complete.")
+        return modules
+
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Error during system initialization: {e}", exc_info=True)
+        return None
+
+def shutdown_system(modules: dict):
+    """Shutdown all system components gracefully."""
+    logger = logging.getLogger(__name__)
+    logger.info("Shutting down system...")
+    try:
+        # Stop vision components first
+        if 'camera_interface' in modules:
+            modules['camera_interface'].stop_capture()
+        if 'image_processor' in modules:
+            modules['image_processor'].stop_processing()
+
+        # Stop serial communication
+        if 'serial_handler' in modules:
+            modules['serial_handler'].close()
+
+        logger.info("System shutdown complete.")
+    except Exception as e:
+        logger.error(f"Error during system shutdown: {e}", exc_info=True)
+
+def run_main_loop(modules: dict):
+    """
+    Main application loop. Coordinates state, data, planning, and control.
+    Includes an internal try-except to catch iteration errors.
+    """
+    logger = logging.getLogger(__name__)
+    logger.info("Entering main application loop.")
+
+    # Get module references
+    serial_handler: SerialHandler = modules['serial_handler']
+    mission_state: MissionState = modules['mission_state']
+    lap_counter: LapCounter = modules['lap_counter']
+    positional_memory: PositionalMemory = modules['positional_memory']
+    path_planner: PathPlanner = modules['path_planner']
+    vehicle_controller: VehicleController = modules['vehicle_controller']
+    camera_interface: CameraInterface = modules['camera_interface']
+    image_processor: ImageProcessor = modules['image_processor']
+
+    # --- Start Vision System ---
+    if not camera_interface.start_capture():
+        logger.error("Failed to start camera capture. Vision will be unavailable.")
+    else:
+         if not image_processor.start_processing():
+             logger.error("Failed to start image processing.")
+             camera_interface.stop_capture() # Stop capture if processing fails
+         else:
+             logger.info("Vision system started.")
+
+    # --- Main Loop Timing ---
+    loop_rate_hz = 20.0
+    loop_period = 1.0 / loop_rate_hz
+    last_heartbeat_time = time.time()
+    heartbeat_interval = 1.0
+
+    # --- State Flags for Mission Start ---
+    initial_data_stored = False
+    mission_officially_started = False # After GO ACK
+
+    logger.info(f"Main loop target rate: {loop_rate_hz} Hz")
+    iteration_count = 0 # For periodic logging
+
+    # --- Main Loop ---
+    while not shutdown_requested:
+        # --- ADD THE TRY BLOCK HERE ---
+        try:
+            # --- CRITICAL DEBUG: Log loop entry ---
+            logger.debug(f"[Main Loop] Starting iteration {iteration_count}.")
+            # --- END CRITICAL DEBUG ---
+            iteration_count += 1
+            loop_start_time = time.time()
+
+            # --- 1. Get Latest Data ---
+            # --- CRITICAL DEBUG: Log data retrieval attempt ---
+            logger.debug(f"[Main Loop {iteration_count}] Attempting to get sensor data...")
+            # --- END CRITICAL DEBUG ---
+            latest_sensor_data: SensorData = serial_handler.getLatestSensorData()
+            # --- CRITICAL DEBUG: Log sensor data retrieval ---
+            logger.debug(f"[Main Loop {iteration_count}] Got sensor data F={latest_sensor_data.us_data.front_distance:.1f}cm")
+            # --- END CRITICAL DEBUG ---
+            # --- CRITICAL DEBUG: Log vision snapshot retrieval attempt ---
+            logger.debug(f"[Main Loop {iteration_count}] Attempting to get vision snapshot...")
+            # --- END CRITICAL DEBUG ---
+            latest_vision_snapshot = image_processor.get_latest_snapshot() # Could be None
+            # --- CRITICAL DEBUG: Log vision snapshot retrieval ---
+            logger.debug(f"[Main Loop {iteration_count}] Got vision snapshot: {latest_vision_snapshot is not None}")
+            # --- END CRITICAL DEBUG ---
+
+            # --- DEBUG: Log data retrieval (periodically to avoid spam) ---
+            if iteration_count % 20 == 0: # Log every 20 iterations
+                logger.debug(f"[Main Loop {iteration_count}] Retrieved  "
+                             f"Sensor F={latest_sensor_data.us_data.front_distance:.1f}cm, "
+                             f"Vision Snap New={latest_vision_snapshot is not None}")
+                if latest_vision_snapshot:
+                     primary_left = latest_vision_snapshot.primary_left_sign
+                     primary_right = latest_vision_snapshot.primary_right_sign
+                     logger.debug(f"[Main Loop {iteration_count}] Vision Details: "
+                                  f"LSign={primary_left is not None}, RSign={primary_right is not None}, "
+                                  f"LEdgeX={latest_vision_snapshot.avg_left_edge_x:.1f}, "
+                                  f'REdgeX={latest_vision_snapshot.avg_right_edge_x:.1f}')
+            # --- END DEBUG ---
+
+            # --- 2. Update State (based on data and time) ---
+            # --- DEBUG: Log phase ---
+            current_phase = mission_state.get_phase()
+            logger.debug(f"[Main Loop {iteration_count}] Current Phase: {current_phase}")
+            # --- END DEBUG ---
+
+            # --- Handle PRE_START Phase ---
+            if current_phase == MissionPhase.PRE_START:
+                # --- CRITICAL DEBUG: Log ACK check ---
+                logger.debug(f"[Main Loop {iteration_count}] Checking for START_ACK...")
+                # --- END CRITICAL DEBUG ---
+                if serial_handler.hasStartAck():
+                     logger.info("[Main] Start button acknowledged by Nano.")
+                     mission_state.set_phase(MissionPhase.WAITING_FOR_GO)
+                     serial_handler.acknowledgeStartAck()
+
+            # --- Handle WAITING_FOR_GO Phase ---
+            elif current_phase == MissionPhase.WAITING_FOR_GO:
+                # Send GO command immediately after START_ACK (mirroring C++ logic)
+                logger.info("[Main] Sending GO command to Nano.")
+                serial_handler.sendGoCommand()
+                # --- ADD THIS LINE ---
+                logger.debug("[Main] DEBUG: GO command (CMD_PI_GO_SIGNAL) sent to Nano.")
+                # --- END ADD ---
+                
+                # Assume Open Challenge initially (or determine later)
+                mission_state.set_challenge_type(ChallengeType.OPEN_CHALLENGE)
+                mission_state.set_phase(MissionPhase.DRIVING_LAPS)
+                mission_state.set_current_lap(0)
+                mission_officially_started = True # Mark the official start time
+                logger.info("[Main] Mission started: Open Challenge, Driving Laps.")
+
+            # --- Handle DRIVING_LAPS, STOPPING_AT_START, FINDING_PARKING, PARKING Phases ---
+            elif current_phase in [
+                MissionPhase.DRIVING_LAPS,
+                MissionPhase.STOPPING_AT_START,
+                MissionPhase.FINDING_PARKING,
+                MissionPhase.PARKING
+            ]:
+
+                # --- CRITICAL: Store Initial Data Exactly Once ---
+                # --- CRITICAL DEBUG: Log initial data storage check ---
+                logger.debug(f"[Main Loop {iteration_count}] Checking initial data storage flag...")
+                # --- END CRITICAL DEBUG ---
+                if mission_officially_started and not initial_data_stored:
+                    # Store the very first sensor and vision snapshot after GO
+                    logger.debug(f"[Main Loop {iteration_count}] Storing initial sensor and vision data...")
+                    positional_memory.store_initial_position(latest_sensor_data, latest_vision_snapshot)
+                    # Also store as pre-stop position initially, can be updated later
+                    positional_memory.store_pre_stop_position(latest_sensor_data, latest_vision_snapshot)
+                    initial_data_stored = True
+                    logger.info("[Main] INITIAL SENSOR AND VISION DATA STORED FOR PARKING/STOPPING.")
+
+                # --- Update Lap Counter (placeholder logic, needs refinement) ---
+                # A more robust system would use PositionalMemory to detect lap completion.
+                # For now, we simulate or use a simple counter increment.
+                # lap_counter.update(latest_sensor_data, latest_vision_snapshot)
+
+                # --- Check for Lap Completion (using PositionalMemory) ---
+                # This is a key part of making the system robust.
+                # --- CRITICAL DEBUG: Log lap completion check ---
+                logger.debug(f"[Main Loop {iteration_count}] Checking for lap completion...")
+                # --- END CRITICAL DEBUG ---
+                if initial_data_stored and mission_state.get_current_lap() < 3:
+                    # Use a high threshold for lap completion to ensure we are really back
+                    similarity_to_start = positional_memory.compare_with_initial(latest_sensor_data, latest_vision_snapshot)
+                    lap_completion_threshold = 0.95 # High threshold
+                    if similarity_to_start > lap_completion_threshold and not lap_counter.is_lap_completed():
+                        logger.info(f"[Main] Lap completion detected (Sim: {similarity_to_start:.2f}).")
+                        lap_counter.increment_lap() # Sets internal flag
+
+                # --- Process Lap Completion Flag ---
+                # --- CRITICAL DEBUG: Log lap flag check ---
+                logger.debug(f"[Main Loop {iteration_count}] Checking lap completion flag...")
+                # --- END CRITICAL DEBUG ---
+                if lap_counter.is_lap_completed():
+                    current_lap = lap_counter.get_current_lap()
+                    mission_state.set_current_lap(current_lap)
+                    logger.info(f"[Main] Lap {current_lap} acknowledged.")
+
+                    if current_lap >= 3:
+                        if mission_state.is_open_challenge():
+                            mission_state.set_phase(MissionPhase.STOPPING_AT_START)
+                            logger.info("[Main] 3 laps completed (Open). Preparing to stop in start.")
+                        elif mission_state.is_obstacle_challenge():
+                            mission_state.set_phase(MissionPhase.FINDING_PARKING)
+                            logger.info("[Main] 3 laps completed (Obstacle). Finding parking spot.")
+
+                    lap_counter.acknowledge_lap_completion() # Clear the flag
+
+                # --- Check for Stopping Condition (Open Challenge) ---
+                if current_phase == MissionPhase.STOPPING_AT_START:
+                    # Use a very high threshold to be sure we are at the exact starting spot
+                    # --- CRITICAL DEBUG: Log stopping check ---
+                    logger.debug(f"[Main Loop {iteration_count}] Checking stopping condition...")
+                    # --- END CRITICAL DEBUG ---
+                    is_at_pre_stop = positional_memory.is_likely_at_pre_stop_position(
+                        latest_sensor_data, latest_vision_snapshot, threshold=0.98
+                    )
+                    if is_at_pre_stop:
+                        logger.info("[Main] Likely at pre-stop position. Executing final stop.")
+                        nav_command_stop = NavigationCommand(NavigationAction.STOP_IN_START, 0.0)
+                        vehicle_controller.execute_command(nav_command_stop)
+                        mission_state.set_phase(MissionPhase.COMPLETED)
+                        logger.info("[Main] Vehicle stopped. Mission COMPLETED (Open).")
+
+                # --- Check for Parking Initiation (Obstacle Challenge) ---
+                # This check can be refined. For now, PathPlanner handles finding the spot.
+                # if (mission_state.get_phase() == MissionPhase.FINDING_PARKING and
+                #     positional_memory.is_likely_at_parking_entrance(latest_sensor_data, latest_vision_snapshot, threshold=0.85)):
+                #     mission_state.set_phase(MissionPhase.PARKING)
+                #     logger.info("[Main] Parking entrance confirmed. Initiating parking sequence.")
+                #     vehicle_controller.start_parking_sequence() # Or let PathPlanner command do it
+
+            # --- 3. Plan (only if not completed/failed) ---
+            # --- CRITICAL DEBUG: Log planning preparation ---
+            logger.debug(f"[Main Loop {iteration_count}] Preparing for planning...")
+            # --- END CRITICAL DEBUG ---
+            nav_command = NavigationCommand() # Default
+            if mission_state.get_phase() not in [MissionPhase.COMPLETED, MissionPhase.EMERGENCY_STOPPED]:
+                # --- DEBUG: Log planning call ---
+                logger.debug(f"[Main Loop {iteration_count}] Calling PathPlanner.plan()")
+                # --- END DEBUG ---
+                nav_command = path_planner.plan(latest_sensor_data, latest_vision_snapshot, mission_state)
+                # --- DEBUG: Log planned command ---
+                logger.debug(f"[Main Loop {iteration_count}] PathPlanner returned: {nav_command}")
+                # --- END DEBUG ---
+
+            # --- 4. Act ---
+            # --- DEBUG: Log actuation call ---
+            logger.debug(f"[Main Loop {iteration_count}] Calling VehicleController.execute_command({nav_command})")
+            # --- END DEBUG ---
+            vehicle_controller.execute_command(nav_command)
+
+            # --- 5. Housekeeping ---
+            current_time = time.time()
+            # --- CRITICAL DEBUG: Log heartbeat check ---
+            logger.debug(f"[Main Loop {iteration_count}] Checking heartbeat condition...")
+            # --- END CRITICAL DEBUG ---
+            if current_time - last_heartbeat_time > heartbeat_interval:
+                if mission_state.is_driving_phase() and not vehicle_controller.is_maneuver_active():
+                    serial_handler.sendHeartbeat()
+                last_heartbeat_time = current_time
+
+            # --- 6. Maintain Loop Rate ---
+            # --- CRITICAL DEBUG: Log loop rate maintenance start ---
+            logger.debug(f"[Main Loop {iteration_count}] Maintaining loop rate...")
+            # --- END CRITICAL DEBUG ---
+            loop_end_time = time.time()
+            execution_time = loop_end_time - loop_start_time
+            sleep_time = loop_period - execution_time
+            if sleep_time > 0:
+                # --- CRITICAL DEBUG: Log sleep duration ---
+                logger.debug(f"[Main Loop {iteration_count}] Sleeping for {sleep_time:.4f}s")
+                # --- END CRITICAL DEBUG ---
+                time.sleep(sleep_time)
+            # --- DEBUG: Log loop rate periodically ---
+            if iteration_count % 100 == 0: # Log every 100 iterations
+                actual_rate = 1.0 / execution_time if execution_time > 0 else 0
+                logger.debug(f"[Main Loop {iteration_count}] Loop Execution Time: {execution_time*1000:.2f}ms (Rate: ~{actual_rate:.1f} Hz)")
+            # --- END DEBUG ---
+
+        # --- ADD THE EXCEPT BLOCK HERE ---
+        except Exception as e:
+            logger.error(f"Unhandled exception in main loop iteration {iteration_count}: {e}", exc_info=True)
+            # Optional: Break the loop on error, or continue (with potential degraded function)
+            # break # Uncomment if you want the loop to stop on the first error
+    # --- END OF TRY-EXCEPT WRAPPING ---
+
+    logger.info("Main loop exited.")
+
+def main():
+    """Entry point of the application."""
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    print("[Main] WRO 2025 Vehicle Controller (Python) Starting...")
+    modules = initialize_system()
+    # if not hasattr(modules.get('serial_handler'), '_test_sent'):
+    #     print("[TEST] Sending test motor speed (50) and servo angle (90)")
+    #     serial_handler.sendMotorSpeedCommand(50)
+    #     serial_handler.sendServoAngleCommand(90)
+    #     modules['serial_handler']._test_sent = True
+    if modules:
+        try:
+            run_main_loop(modules)
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Unhandled exception in main loop: {e}", exc_info=True)
+        finally:
+            shutdown_system(modules)
+    else:
+        print("[Main] System initialization failed. Exiting.")
+        sys.exit(1)
+
+    print("[Main] WRO 2025 Vehicle Controller Shutdown Complete.")
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
+cat: navigation: Is a directory
+# requirements.txt
+opencv-python-headless # or opencv-python
+pyserial
+numpycat: sensors: Is a directory
+cat: utils: Is a directory
+cat: vision: Is a directory
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle_python$ cat */*
+# actuators/vehicle_controller.py
+"""Controls the actuators (motors, servos) via commands sent to the Nano."""
+
+import logging
+import time
+from enum import IntEnum
+from typing import TYPE_CHECKING, Optional
+from control.navigation_command import NavigationAction
+if TYPE_CHECKING:
+    from communication.serial_handler import SerialHandler
+    from control.navigation_command import NavigationCommand, NavigationAction
+    from sensors.sensor_data import SensorData
+
+logger = logging.getLogger(__name__)
+
+class ParkingState(IntEnum):
+    """Represents the state within the parking sequence."""
+    APPROACHING_SPOT = 0
+    REVERSING_INTO_SPOT = 1
+    ADJUSTING_POSITION = 2
+    PARKING_COMPLETE = 3
+    PARKING_FAILED = 4
+
+class VehicleController:
+    """
+    Translates high-level NavigationCommands into low-level actuator commands
+    sent via the SerialHandler. Manages complex maneuvers like parking.
+    """
+
+    def __init__(self, serial_handler: 'SerialHandler'):
+        if not serial_handler:
+            raise ValueError("VehicleController requires a valid SerialHandler.")
+        self.serial_handler = serial_handler
+
+        # Parking state management
+        self.parking_active = False
+        self.parking_state: ParkingState = ParkingState.APPROACHING_SPOT
+        self.parking_step_counter = 0
+        self.parking_start_time = 0.0
+
+        # Last sent commands for potential logging or smoothing
+        self._last_motor_speed = 0.0
+        self._last_servo_angle = 90 # Assume 90 is center
+
+        logger.info("VehicleController initialized.")
+
+    def execute_command(self, command: 'NavigationCommand'):
+        """
+        Execute a NavigationCommand by sending appropriate motor/servo commands.
+        This is the primary interface for the main loop.
+        """
+        if not command:
+            logger.warning("VehicleController: Received None command. Ignoring.")
+            return
+
+        action = command.action
+        desired_speed = command.desired_speed
+
+        # Handle complex maneuvers first
+        if self.parking_active:
+            self._execute_parking_step()
+            return # Parking takes precedence
+
+        # Map NavigationAction to motor/servo commands
+        if action == NavigationAction.GO_STRAIGHT:
+            # Speed determines magnitude, servo centered
+            motor_speed = self._map_normalized_speed(desired_speed)
+            servo_angle = 90 # Straight
+            self._send_motor_command(motor_speed)
+            self._send_servo_command(servo_angle)
+
+        elif action in (NavigationAction.TURN_LEFT, NavigationAction.FOLLOW_LEFT_LANE):
+            motor_speed = self._map_normalized_speed(desired_speed)
+            # Negative angle for left turn (assuming 0 is full left, 180 is full right)
+            servo_angle = max(0, 90 - 30) # Adjust turn angle as needed
+            self._send_motor_command(motor_speed)
+            self._send_servo_command(servo_angle)
+
+        elif action in (NavigationAction.TURN_RIGHT, NavigationAction.FOLLOW_RIGHT_LANE):
+            motor_speed = self._map_normalized_speed(desired_speed)
+            # Positive angle for right turn
+            servo_angle = min(180, 90 + 30) # Adjust turn angle as needed
+            self._send_motor_command(motor_speed)
+            self._send_servo_command(servo_angle)
+
+        elif action == NavigationAction.STOP_IN_START:
+            # Gradual stop or immediate stop?
+            self._send_motor_command(0)
+            self._send_servo_command(90) # Center steering
+            logger.info("VehicleController: Executing STOP_IN_START.")
+
+        elif action == NavigationAction.EXECUTE_PARKING:
+            # Initiate the parking sequence
+            self.start_parking_sequence()
+
+        elif action == NavigationAction.EMERGENCY_STOP:
+            self.emergency_stop()
+        else:
+            logger.warning(f"VehicleController: Unknown action {action}. Stopping.")
+            self._send_motor_command(0)
+            self._send_servo_command(90)
+
+    def _map_normalized_speed(self, normalized_speed: float) -> int:
+        """
+        Map a normalized speed (0.0 to 1.0) to an integer motor command (-255 to 255).
+        Negative values indicate reverse.
+        """
+        # Clamp input
+        clamped_speed = max(-1.0, min(1.0, normalized_speed))
+        # Map to motor range (assuming -255 to 255)
+        mapped_speed = int(clamped_speed * 255)
+        # Clamp output to motor range if library expects it (pyserial doesn't care)
+        return max(-255, min(255, mapped_speed))
+
+    def _send_motor_command(self, speed: int):
+        """Send motor speed command via serial handler."""
+        if speed != self._last_motor_speed:
+            logger.debug(f"VehicleController: Sending motor speed {speed}")
+            self.serial_handler.send_motor_speed_command(speed)
+            self._last_motor_speed = speed
+
+    def _send_servo_command(self, angle: int):
+        """Send servo angle command via serial handler."""
+        # Clamp angle to typical servo range if not already
+        clamped_angle = max(0, min(180, angle))
+        if clamped_angle != self._last_servo_angle:
+            logger.debug(f"VehicleController: Sending servo angle {clamped_angle}")
+            self.serial_handler.send_servo_angle_command(clamped_angle)
+            self._last_servo_angle = clamped_angle
+
+    # --- Parking Sequence Logic ---
+
+    def start_parking_sequence(self):
+        """Initiate the parallel parking sequence."""
+        if self.parking_active:
+            logger.warning("VehicleController: Parking already active. Cannot start new sequence.")
+            return
+
+        logger.info("VehicleController: Starting parallel parking sequence.")
+        self.parking_active = True
+        self.parking_state = ParkingState.APPROACHING_SPOT
+        self.parking_step_counter = 0
+        self.parking_start_time = time.time()
+        # Reset any previous parking state variables if needed
+
+    def _execute_parking_step(self):
+        """Execute the current step of the parking sequence."""
+        if not self.parking_active:
+            return
+
+        self.parking_step_counter += 1
+        current_time = time.time()
+        elapsed_time = current_time - self.parking_start_time
+
+        # --- Simplified Parking State Machine ---
+        # This is a basic placeholder, mirroring the C++ logic's structure.
+        # A real implementation would use encoders, IMU, or precise timing/distance.
+        try:
+            if self.parking_state == ParkingState.APPROACHING_SPOT:
+                # 1. Approach the spot slowly, aligning the rear axle
+                self._send_motor_command(self._map_normalized_speed(0.3)) # Slow forward
+                self._send_servo_command(90) # Straight
+                logger.debug(f"Parking Step {self.parking_step_counter}: APPROACHING_SPOT")
+                # Placeholder condition to move to next state
+                if self.parking_step_counter > 50: # Or based on time/distance/IMU
+                    logger.info("Parking: Transitioning to REVERSING_INTO_SPOT")
+                    self.parking_state = ParkingState.REVERSING_INTO_SPOT
+                    self.parking_step_counter = 0
+
+            elif self.parking_state == ParkingState.REVERSING_INTO_SPOT:
+                # 2. Reverse while turning steering wheel
+                self._send_motor_command(self._map_normalized_speed(-0.4)) # Slow reverse
+                self._send_servo_command(45) # Turn wheels (e.g., full left)
+                logger.debug(f"Parking Step {self.parking_step_counter}: REVERSING_INTO_SPOT")
+                # Placeholder condition
+                if self.parking_step_counter > 70:
+                    logger.info("Parking: Transitioning to ADJUSTING_POSITION")
+                    self.parking_state = ParkingState.ADJUSTING_POSITION
+                    self.parking_step_counter = 0
+
+            elif self.parking_state == ParkingState.ADJUSTING_POSITION:
+                # 3. Adjust position (e.g., straighten wheels, move forward/back)
+                self._send_motor_command(self._map_normalized_speed(0.3)) # Slow forward
+                self._send_servo_command(135) # Turn wheels (e.g., full right)
+                logger.debug(f"Parking Step {self.parking_step_counter}: ADJUSTING_POSITION")
+                # Placeholder condition
+                if self.parking_step_counter > 30:
+                    logger.info("Parking: Transitioning to PARKING_COMPLETE")
+                    self.parking_state = ParkingState.PARKING_COMPLETE
+                    self.parking_step_counter = 0
+
+            elif self.parking_state == ParkingState.PARKING_COMPLETE:
+                # 4. Finalize parking
+                self._send_motor_command(0) # Stop
+                self._send_servo_command(90) # Center
+                logger.info("VehicleController: PARKING SEQUENCE COMPLETED.")
+                self.parking_active = False # End the sequence
+                # Potentially update MissionState phase to COMPLETED here or in main loop
+
+            elif self.parking_state == ParkingState.PARKING_FAILED:
+                # Handle failure (e.g., timeout, obstacle detected)
+                logger.error("VehicleController: PARKING SEQUENCE FAILED.")
+                self._send_motor_command(0)
+                self._send_servo_command(90)
+                self.parking_active = False
+
+            # Optional: Add a timeout mechanism
+            if elapsed_time > 30.0: # e.g., 30 seconds max
+                logger.error("VehicleController: Parking timeout. Aborting.")
+                self.parking_state = ParkingState.PARKING_FAILED
+                self._execute_parking_step() # Re-enter to handle FAILED state
+
+        except Exception as e:
+            logger.error(f"VehicleController: Error during parking step execution: {e}")
+            self.parking_state = ParkingState.PARKING_FAILED
+            self._execute_parking_step() # Attempt to handle error state
+
+    def is_maneuver_active(self) -> bool:
+        """Check if a complex maneuver (like parking) is currently active."""
+        return self.parking_active # Could extend to other maneuvers
+
+    def emergency_stop(self):
+        """Immediately send stop commands and halt maneuvers."""
+        logger.critical("VehicleController: EMERGENCY STOP INITIATED!")
+        self.parking_active = False # Cancel any active maneuver
+        self._send_motor_command(0)
+        self._send_servo_command(90)
+        self.serial_handler.send_emergency_stop() # Send dedicated E-Stop command
+
+
+# Example usage (if run as script - needs mocks)
+if __name__ == "__main__":
+    # This would normally be integrated into the main application flow
+    print("VehicleController class defined.")
+# communication/serial_handler.py
+
+"""Handles serial communication with the Arduino Nano, matching the C++ protocol."""
+
+import serial
+import time
+import threading
+from typing import Optional, Callable
+import logging
+from sensors.sensor_data import SensorData, unpack_compact_sensor_data, COMPACT_SENSOR_DATA_SIZE
+
+# Configure logging
+logging.basicConfig(level=logging.INFO) # Will be replaced by utils logger later
+logger = logging.getLogger(__name__)
+
+# --- Serial Protocol Constants (from C++ logtext.txt) ---
+# Commands FROM Pi TO Nano
+CMD_SET_MOTOR_SPEED = 0x01
+CMD_SET_SERVO_ANGLE = 0x02
+CMD_EMERGENCY_STOP = 0x03
+CMD_HEARTBEAT = 0x04
+CMD_REQUEST_SENSOR_DATA = 0x05 # Pi can request data
+CMD_PI_GO_SIGNAL = 0x06 # Pi's GO command
+
+# Commands FROM Nano TO Pi
+CMD_SENSOR_DATA = 0x10 # Standard sensor data packet
+CMD_START_ACK = 0x11 # Nano acknowledges start button press
+CMD_ERROR = 0x12 # Nano sends an error code
+CMD_ALL_SENSOR_DATA_COMPACT = 0x13 # Nano sends the compact struct
+
+PACKET_START_BYTE = 0xAA
+PACKET_MAX_LENGTH = 32 # As defined in C++
+
+class SerialHandler:
+    """
+    Manages serial communication with the Nano, matching the C++ protocol.
+    Handles sending commands and receiving sensor data packets.
+    """
+
+    def __init__(self, port: str, baudrate: int = 115200):
+        self.port = port
+        self.baudrate = baudrate
+        self.serial_conn: Optional[serial.Serial] = None
+        self.is_open = False
+        self._stop_receiving = threading.Event()
+        self._receive_thread: Optional[threading.Thread] = None
+
+        # Data storage
+        self._latest_sensor_data = SensorData()
+        self._data_lock = threading.Lock()
+        self._start_ack_received = False
+        self._start_ack_lock = threading.Lock()
+        self._last_error_code = 0
+        self._error_lock = threading.Lock()
+
+        # Buffers and parser state
+        self._rx_buffer = bytearray()
+        self._parse_state = "IDLE" # IDLE, COMMAND_RECEIVED, LENGTH_RECEIVED, DATA_RECEIVED
+        self._current_command = 0
+        self._current_length = 0
+        self._data_bytes_received = 0
+
+        # Callbacks (optional)
+        self.on_sensor_data_updated: Optional[Callable[[SensorData], None]] = None
+        self.on_start_ack_received: Optional[Callable[[], None]] = None
+        self.on_error_received: Optional[Callable[[int], None]] = None # Callback for CMD_ERROR
+
+    def open(self) -> bool:
+        """Open the serial port."""
+        if self.is_open:
+            logger.warning("Serial port already open.")
+            return False
+
+        try:
+            # Open serial connection
+            self.serial_conn = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                timeout=1  # Read timeout in seconds
+            )
+            self.is_open = True
+            logger.info(f"Serial port {self.port} opened successfully.")
+            
+            # Start the receiving thread
+            self._stop_receiving.clear()
+            self._receive_thread = threading.Thread(target=self._receive_loop, daemon=True)
+            self._receive_thread.start()
+            logger.debug("Serial receive thread started.")
+            return True
+            
+        except serial.SerialException as e:
+            logger.error(f"Failed to open serial port {self.port}: {e}")
+            self.is_open = False
+            self.serial_conn = None
+            return False
+
+    def close(self):
+        """Close the serial port and stop the receiving thread."""
+        if not self.is_open:
+            return
+
+        logger.info("Closing serial port...")
+        self._stop_receiving.set() # Signal receive thread to stop
+
+        # Wait for the receive thread to finish
+        if self._receive_thread and self._receive_thread.is_alive():
+            self._receive_thread.join(timeout=2.0) # Wait up to 2 seconds
+            if self._receive_thread.is_alive():
+                logger.warning("Serial receive thread did not stop gracefully.")
+
+        # Close the serial connection
+        if self.serial_conn:
+            self.serial_conn.close()
+            self.serial_conn = None
+            
+        self.is_open = False
+        logger.info("Serial port closed.")
+
+    def _receive_loop(self):
+        """Background thread function to receive and parse data."""
+        logger.debug("Serial receive loop started.")
+        
+        while not self._stop_receiving.is_set():
+            try:
+                if self.serial_conn and self.serial_conn.in_waiting > 0:
+                    bytes_available = self.serial_conn.in_waiting
+                    logger.debug(f"SerialHandler: Bytes available to read: {bytes_available}")
+                    raw_data = self.serial_conn.read(self.serial_conn.in_waiting)
+                    if raw_data:
+                        logger.debug(f"SerialHandler: Received {len(raw_data)} bytes.") # Add this line
+                        # Process each byte sequentially like C++
+                        for byte_val in raw_data:
+                            self._process_byte(byte_val)
+                else:
+                    # Small sleep to prevent busy-waiting
+                    time.sleep(0.001) # 1ms sleep
+                    
+            except serial.SerialException as e:
+                logger.error(f"Serial read error: {e}")
+                if "device disconnected" in str(e).lower():
+                    logger.error("Serial device appears disconnected. Stopping receive loop.")
+                    break
+            except Exception as e:
+                logger.error(f"Unexpected error in receive loop: {e}", exc_info=True)
+
+        logger.debug("SerialHandler: Serial receive loop stopped.")
+
+    def _process_byte(self, incoming_byte: int):
+        """Process a single incoming byte according to the state machine."""
+        logger.debug(f"SerialHandler: Processing byte: 0x{incoming_byte:02X}, State: {self._parse_state}")
+        if self._parse_state == "IDLE":
+            if incoming_byte == PACKET_START_BYTE:
+                logger.debug(f"SerialHandler: Found packet start byte 0xAA") # Add this line
+                self._parse_state = "COMMAND_RECEIVED"
+            # else: Ignore byte, stay in IDLE
+
+        elif self._parse_state == "COMMAND_RECEIVED":
+            self._current_command = incoming_byte
+            logger.debug(f"SerialHandler: Received command byte: 0x{self._current_command:02X}")
+            self._parse_state = "LENGTH_RECEIVED"
+
+        elif self._parse_state == "LENGTH_RECEIVED":
+            self._current_length = incoming_byte
+            self._data_bytes_received = 0
+            self._rx_buffer.clear() # Clear buffer for new data
+            logger.debug(f"SerialHandler: Received length byte: {self._current_length}")
+            if self._current_length == 0:
+                self._parse_state = "DATA_RECEIVED" # No data, go straight to checksum
+            elif self._current_length > PACKET_MAX_LENGTH:
+                logger.warning(f"Packet length {self._current_length} exceeds maximum {PACKET_MAX_LENGTH}. Discarding.")
+                self._parse_state = "IDLE" # Reset state
+            else:
+                self._parse_state = "RECEIVING_DATA"
+
+        elif self._parse_state == "RECEIVING_DATA":
+            if self._data_bytes_received < self._current_length:
+                self._rx_buffer.append(incoming_byte)
+                self._data_bytes_received += 1
+                if self._data_bytes_received == self._current_length:
+                    logger.debug(f"SerialHandler: All {self._current_length} data bytes received.")
+                    self._parse_state = "DATA_RECEIVED"
+            # else: Ignore extra bytes if we somehow receive more than length
+
+        elif self._parse_state == "DATA_RECEIVED":
+            # incoming_byte is the checksum
+            received_checksum = incoming_byte
+            logger.debug(f"SerialHandler: Checksum byte received: 0x{received_checksum:02X}")
+            # Prepare packet for checksum calculation: [START][CMD][LEN][DATA...]
+            packet_for_checksum = bytearray([PACKET_START_BYTE, self._current_command, self._current_length])
+            packet_for_checksum.extend(self._rx_buffer)
+            
+            # Calculate checksum
+            calculated_checksum = 0
+            for b in packet_for_checksum:
+                calculated_checksum ^= b
+            logger.debug(f"SerialHandler: Calculated checksum: 0x{calculated_checksum:02X}")
+            if calculated_checksum == received_checksum:
+                # Valid packet, handle it
+                logger.debug(f"SerialHandler: Valid packet received: CMD=0x{self._current_command:02X}, LEN={self._current_length}")
+                self._handle_valid_packet(self._current_command, bytes(self._rx_buffer))
+            else:
+                logger.warning(f"SerialHandler: Checksum mismatch for command 0x{self._current_command:02X}. Packet discarded.(Rxd:0x{received_checksum:02X}, Calc:0x{calculated_checksum:02X})")
+            
+            # Reset parser state regardless of checksum validity
+            self._parse_state = "IDLE"
+            self._rx_buffer.clear()
+            self._data_bytes_received = 0
+
+    def _handle_valid_packet(self, command: int, data_bytes: bytes):
+        """Handle a received packet with a valid checksum."""
+        logger.debug(f"SerialHandler: Handling valid packet: CMD=0x{command:02X}, LEN={len(data_bytes)}")
+        
+        if command == CMD_START_ACK and len(data_bytes) >= 1:
+            started_flag = data_bytes[0]
+            if started_flag == 0x01: # C++ sends 0x01 if started
+                logger.info("SerialHandler: Received START_ACK (button pressed) from Nano.")
+                with self._start_ack_lock:
+                    self._start_ack_received = True
+                # Trigger callback if set
+                if self.on_start_ack_received:
+                    try:
+                        self.on_start_ack_received()
+                    except Exception as e:
+                        logger.error(f"SerialHandler: Error in on_start_ack_received callback: {e}")
+            else:
+                logger.debug(f"SerialHandler: Received START_ACK with flag 0x{started_flag:02X} (not started).")
+
+        elif command == CMD_ALL_SENSOR_DATA_COMPACT and len(data_bytes) == COMPACT_SENSOR_DATA_SIZE:
+            logger.debug("SerialHandler: Received COMPACT_SENSOR_DATA packet.")
+            # The C++ code packs the struct directly. We need to append the checksum byte
+            # that was used for internal validation in the unpack function.
+            # However, our unpack function expects the full packet including checksum.
+            # Let's reconstruct the packet data for unpacking.
+            # Actually, our previous unpack function expected the raw data + checksum byte.
+            # But here, data_bytes is just the data part. We need to pass it correctly.
+            # Let's modify the unpack function call or reconstruct the packet.
+            # Better: Modify unpack function to take just the data part.
+            # Or, pass data_bytes as is, assuming it's the struct data.
+            # The C++ code casts the data part directly to the struct.
+            # Our unpack function should take data_bytes directly.
+            sensor_data, is_valid_internal = unpack_compact_sensor_data(data_bytes)
+            if is_valid_internal: # Checksum inside the struct data
+                logger.debug(f"SerialHandler: Unpacked sensor data: F={sensor_data.us_data.front_distance:.1f}cm,"f"GX={sensor_data.imu_data.gyro_x:.2f}d/s,"f" GY={sensor_data.imu_data.gyro_y:.2f}d/s,"f" GZ={sensor_data.imu_data.gyro_z:.2f}d/s")
+                with self._data_lock:
+                    self._latest_sensor_data = sensor_data
+                # Trigger callback if set
+                if self.on_sensor_data_updated:
+                    try:
+                        self.on_sensor_data_updated(sensor_data)
+                    except Exception as e:
+                        logger.error(f"SerialHandler: Error in on_sensor_data_updated callback: {e}")
+            else:
+                logger.warning("SerialHandler: Received sensor data packet with invalid internal checksum.")
+
+        elif command == CMD_ERROR and len(data_bytes) >= 1:
+            error_code = data_bytes[0]
+            logger.warning(f"SerialHandler: Received ERROR code 0x{error_code:02X} from Nano.")
+            with self._error_lock:
+                self._last_error_code = error_code
+            if self.on_error_received:
+                try:
+                    self.on_error_received(error_code)
+                except Exception as e:
+                    logger.error(f"SerialHandler: Error in on_error_received callback: {e}")
+
+        elif command == CMD_SENSOR_DATA:
+            # Handle standard sensor data packet if needed (not used in C++?)
+            logger.debug(f"SerialHandler: Received standard SENSOR_DATA packet (len={len(data_bytes)}). Not implemented handler.")
+        else:
+            logger.debug(f"SerialHandler: Received unhandled packet: CMD=0x{command:02X}, LEN={len(data_bytes)}")
+
+    # --- Sending Commands ---
+
+    def _send_packet(self, command: int, data: bytes = b''):
+        """Internal method to create and send a packet."""
+        if not self.is_open or not self.serial_conn:
+            logger.warning("SerialHandler: Cannot send packet, serial port is not open.")
+            return False
+
+        length = len(data)
+        if length > PACKET_MAX_LENGTH:
+            logger.error(f"SerialHandler: Data length {length} exceeds maximum ({PACKET_MAX_LENGTH} bytes).")
+            return False
+
+        packet = bytearray()
+        packet.append(PACKET_START_BYTE)
+        packet.append(command)
+        packet.append(length)
+        packet.extend(data)
+
+        # Calculate checksum (XOR of all bytes: start, cmd, len, data)
+        checksum = 0
+        for b in packet:
+            checksum ^= b
+        packet.append(checksum)
+
+        try:
+            logger.debug(f"SerialHandler: Sending packet: START=0xAA, CMD=0x{command:02X}, LEN={length},DATA_SIZE={len(data)}, DATA={data.hex()}, CHECKSUM=0x{checksum:02X}")
+            self.serial_conn.write(packet)
+            # logger.debug(f"Sent packet: {packet.hex()}")
+            return True
+        except serial.SerialException as e:
+            logger.error(f"SerialHandler: Failed to send packet: {e}")
+            return False
+
+    # --- Public Methods for Sending Commands (Matching C++ names) ---
+
+    def sendGoCommand(self) -> bool:
+        """Send the Pi's GO command to the Nano."""
+        logger.info("SerialHandler: Sending GO command to Nano.")
+        return self._send_packet(CMD_PI_GO_SIGNAL)
+
+    def sendHeartbeat(self) -> bool:
+        """Send a heartbeat packet."""
+        logger.debug("SerialHandler: Sending heartbeat.")
+        return self._send_packet(CMD_HEARTBEAT)
+
+    def sendEmergencyStop(self) -> bool:
+        """Send an emergency stop command."""
+        logger.warning("SerialHandler: Sending EMERGENCY STOP command to Nano.")
+        return self._send_packet(CMD_EMERGENCY_STOP)
+
+    def sendMotorSpeedCommand(self, speed: int) -> bool:
+        """
+        Send motor speed command.
+        Speed: int8_t mapped to -128 to 127 (like C++ map function).
+        """
+        # Clamp speed to int8_t range
+        clamped_speed = max(-128, min(127, speed))
+        # Convert signed int to unsigned byte for transmission
+        speed_byte = clamped_speed & 0xFF
+        logger.debug(f"SerialHandler: Sending motor speed command: {speed} (byte: 0x{speed_byte:02X})")
+        return self._send_packet(CMD_SET_MOTOR_SPEED, bytes([speed_byte]))
+
+    def sendServoAngleCommand(self, angle: int) -> bool:
+        """
+        Send servo angle command.
+        Angle: uint8_t (0-180).
+        """
+        clamped_angle = max(0, min(180, angle))
+        logger.debug(f"SerialHandler: Sending servo angle command: {angle}")
+        return self._send_packet(CMD_SET_SERVO_ANGLE, bytes([clamped_angle]))
+
+    def requestData(self) -> bool:
+        """Request sensor data from Nano (if Nano supports CMD_REQUEST_SENSOR_DATA)."""
+        logger.debug("SerialHandler: Requesting sensor data from Nano.")
+        return self._send_packet(CMD_REQUEST_SENSOR_DATA)
+
+
+    # --- Receiving Data ---
+
+    def getLatestSensorData(self) -> SensorData:
+        """Get the latest sensor data received."""
+        with self._data_lock:
+            logger.debug(f"SerialHandler: getLatestSensorData called, returning data: F={self._latest_sensor_data.us_data.front_distance:.1f}cm,"f"GX={self._latest_sensor_data.imu_data.gyro_x:.2f}d/s,"f" GY={self._latest_sensor_data.imu_data.gyro_y:.2f}d/s,"f" GZ={self._latest_sensor_data.imu_data.gyro_z:.2f}d/s")
+            # Returning reference for now, as in C++
+            return self._latest_sensor_data
+
+    def hasStartAck(self) -> bool:
+        """Check if the START_ACK has been received."""
+        with self._start_ack_lock:
+            logger.debug(f"SerialHandler: hasStartAck called, returning {self._start_ack_received}")
+            return self._start_ack_received
+
+    def acknowledgeStartAck(self):
+        """Clear the START_ACK received flag."""
+        with self._start_ack_lock:
+            logger.debug(f"SerialHandler: acknowledgeStartAck called, clearing flag: {self._start_ack_received}")
+            self._start_ack_received = False
+        logger.debug("START_ACK acknowledged and cleared.")
+
+    def getLastError(self) -> int:
+        """Get the last error code received."""
+        with self._error_lock:
+            return self._last_error_code
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    import config.vehicle_config as cfg
+    
+    def on_sensor_data( SensorData):
+        # Simple print, avoid flooding console
+        pass
+        # print(f"Callback - F={data.us_data.front_distance:.1f}cm, GZ={data.imu_data.gyro_z:.2f}d/s")
+
+    def on_start():
+        print("Callback - START ACK (Button Pressed) Received!")
+
+    def on_error(error_code: int):
+        print(f"Callback - ERROR 0x{error_code:02X} Received!")
+
+    sh = SerialHandler(cfg.SERIAL_PORT, cfg.SERIAL_BAUDRATE)
+    sh.on_sensor_data_updated = on_sensor_data
+    sh.on_start_ack_received = on_start
+    sh.on_error_received = on_error
+
+    if sh.open():
+        print("Serial port opened. Waiting for data or sending commands...")
+        try:
+            # Example: Send a heartbeat periodically and check for ack
+            counter = 0
+            while True:
+                time.sleep(1)
+                counter += 1
+                # sh.sendHeartbeat() # Uncomment if you want to send heartbeats
+                if counter % 5 == 0: # Every 5 seconds
+                    print(f"Status: StartAck={sh.hasStartAck()}")
+                    if sh.hasStartAck():
+                        print("Sending GO command!")
+                        sh.sendGoCommand()
+                        sh.acknowledgeStartAck() # Clear the flag
+                        
+        except KeyboardInterrupt:
+            print("\nInterrupted by user.")
+        finally:
+            sh.close()
+    else:
+        print("Failed to open serial port.")
+# config/vehicle_config.py
+
+"""Configuration file for the WRO 2025 Vehicle."""
+
+import os
+
+# --- Serial Communication ---
+# SERIAL_PORT = os.environ.get("WRO_SERIAL_PORT", "/dev/serial0") # Default, can be overridden by environment variable
+SERIAL_PORT = "/dev/ttyUSB0" # For testing with USB-Serial adapter, change as needed
+SERIAL_BAUDRATE = 115200
+
+# --- Camera ---
+# Default camera settings (can be adjusted)
+CAMERA_WIDTH = 640
+CAMERA_HEIGHT = 480
+CAMERA_FPS = 30
+CAMERA_DEVICE = "/base/soc/i2c0mux/i2c@1/imx219@10" # Default for Pi Camera Module 2, adjust if needed for OV5647 or libcamera
+
+# --- Sensor Data Packet (Matching C++ CompactSensorData) ---
+# Size of the CompactSensorData struct from C++
+COMPACT_SENSOR_DATA_SIZE = 18 # Update if the C++ struct changes
+
+# --- Mission States (Matching C++ enums) ---
+class ChallengeType:
+    UNKNOWN = 0
+    OPEN = 1
+    OBSTACLE = 2
+
+class MissionPhase:
+    PRE_START = 0
+    WAITING_FOR_GO = 1
+    DRIVING_LAPS = 2
+    STOPPING_AT_START = 3 # Used for Open Challenge after 3 laps
+    FINDING_PARKING = 4   # Used for Obstacle Challenge after 3 laps
+    PARKING = 5
+    EMERGENCY_STOPPED = 6
+    COMPLETED = 7
+
+# --- Navigation Commands (Matching C++ NavigationCommand::Action) ---
+class NavigationAction:
+    GO_STRAIGHT = 0
+    TURN_LEFT = 1
+    TURN_RIGHT = 2
+    STOP_IN_START = 3 # Stop in the starting section (after 3 laps in Open)
+    EXECUTE_PARKING = 4 # Initiate the parking sequence (after 3 laps in Obstacle)
+    EMERGENCY_STOP = 5
+    # Add more actions if defined in C++
+
+# --- Colors (Based on WRO 2025 Rules) ---
+# These are base values. Calibration will adjust actual HSV ranges used.
+COLORS = {
+    "TRACK_WHITE": {
+        "name": "Track Mat (White)",
+        "rgb": (255, 255, 255), # Approximate
+        "description": "Primary background color of the track."
+    },
+    "WALL_BLACK": {
+        "name": "Interior Walls (Black)",
+        "rgb": (0, 0, 0), # Approximate
+        "description": "Color of the track walls for edge detection."
+    },
+    "SIGN_RED": {
+        "name": "Red Traffic Sign",
+        "rgb": (238, 39, 55), # As per rules
+        "description": "Indicates turn/move right in Obstacle Challenge."
+    },
+    "SIGN_GREEN": {
+        "name": "Green Traffic Sign",
+        # Assuming a correct green value (rule snippet had red value)
+        "rgb": (68, 214, 44), # Common WRO green, verify from full PDF
+        "description": "Indicates turn/move left in Obstacle Challenge."
+    },
+    "PARKING_MAGENTA": {
+        "name": "Parking Lot Boundaries (Magenta)",
+        "rgb": (255, 0, 255), # As per rules
+        "description": "Physical boundaries of the parking space."
+    }
+    # Add other specified colors if needed for detection (e.g., seat lines)
+}
+
+# --- Logging ---
+# Basic logging configuration can be set up later
+LOG_LEVEL = os.environ.get("WRO_LOG_LEVEL", "DEBUG") # Can be DEBUG, INFO, WARNING, ERROR
+
+# --- Parking ---
+# Placeholder for parking parameters, likely determined dynamically
+PARKING_LOT_WIDTH_CM = 20.0 # As per rules
+# Length is 1.5 * vehicle length - needs measurement
+# control/navigation_command.py
+"""Defines the NavigationCommand data structure, matching the C++ version."""
+
+from dataclasses import dataclass
+from enum import IntEnum
+
+# --- Add this import for type hinting ---
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from navigation.mission_state import MissionState # To avoid circular import
+
+class NavigationAction(IntEnum):
+    """Actions the vehicle can take, matching C++ NavigationCommand::Action."""
+    GO_STRAIGHT = 0
+    TURN_LEFT = 1   # Follow left lane
+    TURN_RIGHT = 2  # Follow right lane
+    STOP_IN_START = 3 # Stop in the starting section (after 3 laps in Open)
+    EXECUTE_PARKING = 4 # Initiate the parking sequence (after 3 laps in Obstacle)
+    EMERGENCY_STOP = 5
+    FOLLOW_LEFT_LANE = 6  # Explicit left lane following
+    FOLLOW_RIGHT_LANE = 7 # Explicit right lane following
+    # Add more actions if defined in C++
+
+@dataclass
+class NavigationCommand:
+    """
+    Represents a high-level navigation command generated by the PathPlanner.
+    """
+    action: NavigationAction = NavigationAction.GO_STRAIGHT
+    desired_speed: float = 0.0 # Normalized or mapped speed command (e.g., 0.0 to 1.0)
+
+    def __str__(self):
+        return f"NavCmd(Action: {self.action.name}, Speed: {self.desired_speed:.2f})"
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    cmd1 = NavigationCommand()
+    print(cmd1)
+
+    cmd2 = NavigationCommand(NavigationAction.TURN_LEFT, 0.7)
+    print(cmd2)# control/path_planner.py
+"""Advanced Path Planner, mirroring the C++ structure and logic."""
+
+import logging
+from typing import TYPE_CHECKING
+from navigation.mission_state import MissionState, MissionPhase
+# Import our data structures
+from control.navigation_command import NavigationCommand, NavigationAction
+# Use TYPE_CHECKING to avoid circular imports during type checking
+if TYPE_CHECKING:
+    from sensors.sensor_data import SensorData
+    from vision.vision_snapshot import VisionSnapshot
+    from navigation.mission_state import MissionState
+    from navigation.lap_counter import LapCounter
+    # from vision.sign_detector import SignDetector # If we had a separate sign detector
+
+logger = logging.getLogger(__name__)
+
+class PathPlanner:
+    """
+    Plans high-level navigation commands based on sensor data, vision data, and mission state.
+    Mirrors the C++ PathPlanner class structure.
+    """
+
+    def __init__(self):
+        """Initialize the PathPlanner."""
+        self.last_known_challenge = None # To track changes
+        # Dependencies (to be injected or initialized later)
+        self.lap_counter: 'LapCounter' = None # Placeholder
+        # self.sign_detector = None # If separate
+
+        logger.info("PathPlanner initialized.")
+
+    def initialize(self, lap_counter: 'LapCounter'): # , sign_detector=None): # Add sign_detector if needed
+        """
+        Initialize the PathPlanner with its dependencies.
+        Args:
+            lap_counter: An instance of LapCounter.
+            # sign_detector: An instance of SignDetector (optional).
+        Returns:
+            bool: True if initialization is successful.
+        """
+        if not lap_counter: # or not sign_detector):
+            logger.error("PathPlanner: Invalid dependencies provided.")
+            return False
+
+        self.lap_counter = lap_counter
+        # self.sign_detector = sign_detector
+        logger.info("PathPlanner: Initialized with dependencies.")
+        return True
+
+    def plan(self, sensor_data: 'SensorData', vision_snapshot: 'VisionSnapshot', mission_state: 'MissionState') -> NavigationCommand:
+        """
+        Main planning function. Dispatches to specific planning methods based on mission state.
+        Args:
+            sensor_data: Latest sensor data.
+            vision_snapshot: Latest vision processing results.
+            mission_state: Current mission state.
+        Returns:
+            NavigationCommand: The planned command.
+        """
+        # Update internal state if challenge type changed
+        current_challenge = mission_state.get_challenge_type()
+        logger.debug(f"PathPlanner.plan() called with challenge type: {current_challenge}") # Add this line for debugging
+        if current_challenge != self.last_known_challenge:
+            self.last_known_challenge = current_challenge
+            challenge_name = "Open" if mission_state.is_open_challenge() else "Obstacle"
+            logger.info(f"PathPlanner: Challenge type changed to {challenge_name}")
+
+        # Dispatch to specific planning logic based on mission phase and challenge type
+        phase = mission_state.get_phase()
+        try:
+            if phase == MissionPhase.DRIVING_LAPS:
+                if mission_state.is_open_challenge():
+                    return self._plan_for_open_challenge(sensor_data, vision_snapshot, mission_state)
+                elif mission_state.is_obstacle_challenge():
+                    return self._plan_for_obstacle_challenge(sensor_data, vision_snapshot, mission_state)
+
+            elif phase in (MissionPhase.STOPPING_AT_START,):
+                # This phase is for stopping in the start section after 3 laps.
+                # The main logic for *when* to stop should be in main loop using PositionalMemory.
+                # PathPlanner provides the command to execute the stop.
+                return self._plan_for_stopping(sensor_data, vision_snapshot, mission_state)
+
+            elif phase in (MissionPhase.FINDING_PARKING, MissionPhase.PARKING):
+                if mission_state.is_obstacle_challenge():
+                    return self._plan_for_parking(sensor_data, vision_snapshot, mission_state)
+
+            elif phase == MissionPhase.EMERGENCY_STOPPED:
+                return NavigationCommand(NavigationAction.EMERGENCY_STOP, 0.0)
+
+            else:
+                # Phases like PRE_START, WAITING_FOR_GO, COMPLETED don't require path planning here
+                # Default action if no specific logic applies
+                logger.debug(f"PathPlanner: No specific plan for phase {phase}. Defaulting to GO_STRAIGHT.")
+                return NavigationCommand(NavigationAction.GO_STRAIGHT, 0.0)
+
+        except Exception as e:
+            logger.error(f"PathPlanner: Error during planning: {e}", exc_info=True)
+            # Fail-safe: Emergency stop on planning error
+            return NavigationCommand(NavigationAction.EMERGENCY_STOP, 0.0)
+
+    def _plan_for_open_challenge(self, sensor_data: 'SensorData', vision_snapshot: 'VisionSnapshot', mission_state: 'MissionState') -> NavigationCommand:
+        """
+        Plan path for the Open Challenge (no traffic signs, follow walls/center line).
+        Args:
+            sensor_data: Latest sensor data.
+            vision_snapshot: Latest vision processing results.
+            mission_state: Current mission state.
+        Returns:
+            NavigationCommand: The planned command.
+        """
+        logger.debug("PathPlanner: Planning for Open Challenge.")
+        desired_speed = 0.6 # Base speed
+
+        # --- Basic Obstacle Avoidance (Fallback/Supplement) ---
+        # This takes precedence over normal navigation
+        avoidance_needed, turn_direction = self._needs_obstacle_avoidance(sensor_data)
+        if avoidance_needed:
+            avoidance_speed = 0.4 # Slow down
+            if turn_direction < 0: # Turn left
+                logger.info("PathPlanner (Open): Obstacle avoidance - turning left.")
+                # For simplicity, assume steering is handled by lower level based on US
+                return NavigationCommand(NavigationAction.GO_STRAIGHT, avoidance_speed)
+            elif turn_direction > 0: # Turn right
+                logger.info("PathPlanner (Open): Obstacle avoidance - turning right.")
+                return NavigationCommand(NavigationAction.GO_STRAIGHT, avoidance_speed)
+            else: # Go straight (e.g., center obstacle, back up?)
+                 logger.info("PathPlanner (Open): Obstacle avoidance - going straight/backing up?.")
+                 return NavigationCommand(NavigationAction.GO_STRAIGHT, -avoidance_speed) # Negative for reverse?
+
+        # --- Wall Following / Center Line Following Logic ---
+        # Use vision data (edge detection) or sensor data (US distances) for wall following.
+        # Simple Proportional control based on vision edge data
+        left_edge_x = vision_snapshot.avg_left_edge_x
+        right_edge_x = vision_snapshot.avg_right_edge_x
+        track_width_estimate = vision_snapshot.get_track_width_estimate()
+
+        # Assume camera resolution width is known (from config)
+        import config.vehicle_config as cfg
+        frame_center_x = cfg.CAMERA_WIDTH / 2.0
+
+        # Strategy: Follow center of track
+        if left_edge_x >= 0 and right_edge_x >= 0 and track_width_estimate > 50: # Valid edges
+            track_center_x = (left_edge_x + right_edge_x) / 2.0
+            error = track_center_x - frame_center_x
+
+            # Simple P controller (Kp needs tuning)
+            Kp = 0.01 # Tuning parameter
+            steering_adjustment = -Kp * error # Negative because positive error means turn right
+
+            # Map steering_adjustment to servo angle or command
+            # This is conceptual; actual mapping happens in VehicleController
+            # For command, we might just indicate intent and speed
+            # A more advanced system might calculate a specific steering angle/servo command here
+
+            if abs(error) < 20: # Within tolerance
+                logger.debug(f"PathPlanner (Open): Centered (Error: {error:.1f}). Going straight.")
+                return NavigationCommand(NavigationAction.GO_STRAIGHT, desired_speed)
+            elif error > 0: # Too far right, need to turn left
+                logger.debug(f"PathPlanner (Open): Off-center (Error: {error:.1f}). Turning left.")
+                return NavigationCommand(NavigationAction.TURN_LEFT, desired_speed)
+            else: # error < 0, Too far left, need to turn right
+                logger.debug(f"PathPlanner (Open): Off-center (Error: {error:.1f}). Turning right.")
+                return NavigationCommand(NavigationAction.TURN_RIGHT, desired_speed)
+
+        elif left_edge_x >= 0: # Only left edge visible, follow left wall
+             logger.debug("PathPlanner (Open): Following left wall.")
+             return NavigationCommand(NavigationAction.FOLLOW_LEFT_LANE, desired_speed)
+        elif right_edge_x >= 0: # Only right edge visible, follow right wall
+             logger.debug("PathPlanner (Open): Following right wall.")
+             return NavigationCommand(NavigationAction.FOLLOW_RIGHT_LANE, desired_speed)
+        else:
+            # No clear edges, go straight cautiously
+            logger.warning("PathPlanner (Open): No clear track edges detected. Proceeding straight.")
+            return NavigationCommand(NavigationAction.GO_STRAIGHT, desired_speed * 0.8) # Slow down
+
+    def _plan_for_obstacle_challenge(self, sensor_data: 'SensorData', vision_snapshot: 'VisionSnapshot', mission_state: 'MissionState') -> NavigationCommand:
+        """
+        Plan path for the Obstacle Challenge (follow traffic signs).
+        Args:
+            sensor_data: Latest sensor data.
+            vision_snapshot: Latest vision processing results.
+            mission_state: Current mission state.
+        Returns:
+            NavigationCommand: The planned command.
+        """
+        logger.debug("PathPlanner: Planning for Obstacle Challenge.")
+        desired_speed = 0.6 # Base speed
+
+        # --- Basic Obstacle Avoidance (Fallback/Supplement) ---
+        # Takes precedence even in Obstacle Challenge
+        avoidance_needed, turn_direction = self._needs_obstacle_avoidance(sensor_data)
+        if avoidance_needed:
+             avoidance_speed = 0.4
+             if turn_direction < 0:
+                 logger.info("PathPlanner (Obstacle): Obstacle avoidance - turning left.")
+                 return NavigationCommand(NavigationAction.GO_STRAIGHT, avoidance_speed)
+             elif turn_direction > 0:
+                 logger.info("PathPlanner (Obstacle): Obstacle avoidance - turning right.")
+                 return NavigationCommand(NavigationAction.GO_STRAIGHT, avoidance_speed)
+             else:
+                 logger.info("PathPlanner (Obstacle): Obstacle avoidance - going straight.")
+                 return NavigationCommand(NavigationAction.GO_STRAIGHT, -avoidance_speed)
+
+        # --- Sign Following Logic ---
+        # Determine lane to follow based on sign detection
+        primary_left_sign = vision_snapshot.primary_left_sign
+        primary_right_sign = vision_snapshot.primary_right_sign
+
+        follow_left = False
+        follow_right = False
+
+        # Logic: if both signs detected with high confidence, it's a conflict or close proximity.
+        # Prioritize based on confidence or last known rule (e.g., last sign seen?).
+        # For simplicity, let's prioritize the one with higher confidence, or left if equal/both low.
+        # A more robust system would need better conflict resolution.
+
+        if primary_left_sign and primary_left_sign.is_valid() and primary_left_sign.confidence > 0.5:
+            follow_left = True
+        if primary_right_sign and primary_right_sign.is_valid() and primary_right_sign.confidence > 0.5:
+            follow_right = True
+
+        if follow_left and follow_right:
+            # Conflict: Both signs detected. Resolve.
+            logger.warning("PathPlanner (Obstacle): Potential sign conflict detected.")
+            if primary_left_sign.confidence > primary_right_sign.confidence:
+                follow_right = False
+                logger.info("PathPlanner (Obstacle): Resolved conflict, following LEFT sign (higher confidence).")
+            elif primary_right_sign.confidence > primary_left_sign.confidence:
+                follow_left = False
+                logger.info("PathPlanner (Obstacle): Resolved conflict, following RIGHT sign (higher confidence).")
+            else:
+                # Equal confidence or both low, default to left or last known direction?
+                # Let's default to left for now.
+                follow_right = False
+                logger.info("PathPlanner (Obstacle): Resolved conflict, defaulting to LEFT sign.")
+
+        if follow_left:
+            logger.info("PathPlanner (Obstacle): Following LEFT lane as instructed by sign.")
+            return NavigationCommand(NavigationAction.FOLLOW_LEFT_LANE, desired_speed)
+        elif follow_right:
+            logger.info("PathPlanner (Obstacle): Following RIGHT lane as instructed by sign.")
+            return NavigationCommand(NavigationAction.FOLLOW_RIGHT_LANE, desired_speed)
+        else:
+            # No clear sign instruction. Default behavior?
+            # Could be: follow center, follow last known direction, or wait/slow down.
+            # Let's assume follow center line based on edges if available, otherwise slow down.
+            logger.info("PathPlanner (Obstacle): No clear sign instruction. Following center line or slowing down.")
+            # Re-use open challenge centering logic as fallback
+            return self._plan_for_open_challenge(sensor_data, vision_snapshot, mission_state) # Or a simplified version
+
+
+    def _plan_for_stopping(self, sensor_data: 'SensorData', vision_snapshot: 'VisionSnapshot', mission_state: 'MissionState') -> NavigationCommand:
+        """
+        Plan for stopping in the start section (Open) or finishing (Obstacle).
+        The decision to stop is made externally (e.g., by PositionalMemory in main loop).
+        This just provides the command to execute the stop.
+        Args:
+            sensor_data: Latest sensor data.
+            vision_snapshot: Latest vision processing results.
+            mission_state: Current mission state.
+        Returns:
+            NavigationCommand: The STOP command.
+        """
+        logger.info("PathPlanner: Generating STOP command for stopping phase.")
+        # The action (STOP_IN_START) implies stopping and potentially specific maneuver
+        # The speed is 0.0
+        return NavigationCommand(NavigationAction.STOP_IN_START, 0.0)
+
+    def _plan_for_parking(self, sensor_data: 'SensorData', vision_snapshot: 'VisionSnapshot', mission_state: 'MissionState') -> NavigationCommand:
+        """
+        Plan for finding and executing parking (Obstacle Challenge).
+        """
+        # ... (previous code) ...
+
+        # --- Refine Parking Logic ---
+        if phase == mission_state.MissionPhase.FINDING_PARKING:
+            logger.debug("PathPlanner: In FINDING_PARKING phase.")
+            # Simplified check: Assume we are in the start section and looking for the spot.
+            # A more robust check would use positional memory or vision to confirm proximity to the parking area.
+            # The C++ code has a placeholder check for large right distance.
+            # Let's use a similar simple check for now, but acknowledge positional memory exists.
+            # In a full implementation, PathPlanner might receive a reference to PositionalMemory.
+
+            # Example check (replace with more robust logic using PositionalMemory if available in scope)
+            # if mission_state.is_in_start_section(): # This flag needs setting logic
+            if sensor_data.us_data.right_distance > 100: # Placeholder for "gap detected"
+                logger.info("PathPlanner (Parking): Parking entrance potentially found. Initiating parking sequence.")
+                return NavigationCommand(NavigationAction.EXECUTE_PARKING, 0.0)
+            else:
+                logger.debug("PathPlanner (Parking): Navigating towards parking area.")
+                # Could follow outer wall or re-trace path.
+                return NavigationCommand(NavigationAction.FOLLOW_RIGHT_LANE, 0.4) # Slow approach
+
+        elif phase == mission_state.MissionPhase.PARKING:
+            logger.debug("PathPlanner: In PARKING phase.")
+            # Execute the specific parking maneuver command.
+            # The actual sequence is handled by VehicleController.
+            logger.info("PathPlanner: Executing PARKING maneuver command.")
+            return NavigationCommand(NavigationAction.EXECUTE_PARKING, 0.0)
+
+
+    def _needs_obstacle_avoidance(self, sensor_data: 'SensorData') -> tuple[bool, float]:
+        """
+        Basic obstacle avoidance logic based on ultrasonic sensors.
+        Args:
+            sensor_data: Latest sensor data.
+        Returns:
+            tuple[bool, float]: (needs_avoidance, turn_direction).
+                            turn_direction: -1=left, 1=right, 0=none/straight.
+        """
+        # Thresholds (these are examples, need tuning)
+        front_threshold = 20.0  # cm
+        side_threshold = 15.0   # cm
+
+        front_dist = sensor_data.us_data.front_distance
+        left_dist = sensor_data.us_data.left_distance
+        right_dist = sensor_data.us_data.right_distance
+        # back_dist = sensor_data.us_data.back_distance # Might be useful for backing up
+
+        if front_dist < front_threshold and front_dist > 0: # Valid reading and too close
+            # Obstacle in front
+            if left_dist > right_dist and left_dist > side_threshold:
+                # More space on the left
+                logger.debug(f"ObstacleAvoidance: Front obstacle. Turning LEFT. (F:{front_dist:.1f}, L:{left_dist:.1f}, R:{right_dist:.1f})")
+                return True, -1.0 # Turn left
+            elif right_dist > left_dist and right_dist > side_threshold:
+                # More space on the right
+                logger.debug(f"ObstacleAvoidance: Front obstacle. Turning RIGHT. (F:{front_dist:.1f}, L:{left_dist:.1f}, R:{right_dist:.1f})")
+                return True, 1.0 # Turn right
+            else:
+                # No clear side preference or boxed in
+                logger.debug(f"ObstacleAvoidance: Front obstacle. No clear side or boxed in. (F:{front_dist:.1f}, L:{left_dist:.1f}, R:{right_dist:.1f})")
+                return True, 0.0 # Go straight/back up?
+
+        # Could also check for side obstacles forcing a turn away
+        # e.g., if left_dist < side_threshold and right_dist > left_dist + 5:
+        #       return True, 1.0 # Turn right to avoid left wall
+
+        # No immediate front obstacle requiring action
+        return False, 0.0
+
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    import utils.logger
+    utils.logger.setup_logging()
+
+    # This would normally be integrated into the main application flow
+    # and receive real data objects.
+    planner = PathPlanner()
+    # Mock dependencies would be needed to run this standalone
+    print("PathPlanner class defined.")
+# navigation/lap_counter.py
+"""Counts laps and determines if the vehicle is in the start section."""
+
+import logging
+import time
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from sensors.sensor_data import SensorData
+    from vision.vision_snapshot import VisionSnapshot
+    from navigation.positional_memory import PositionalMemory # Add this import
+
+import config.vehicle_config as cfg
+
+logger = logging.getLogger(__name__)
+
+class LapCounter:
+    """
+    Counts laps and determines if the vehicle is in the start section.
+    Uses IMU odometry (distance/angle) and PositionalMemory for robustness.
+    """
+
+    def __init__(self):
+        self.current_lap = 0
+        self.lap_completed_flag = False
+        
+        # --- Odometry State ---
+        self._total_distance_traveled_cm = 0.0 # In cm
+        self._total_angle_turned_deg = 0.0 # In degrees (cumulative, can be >360)
+        self._last_sensor_data: Optional['SensorData'] = None
+        self._last_update_time: Optional[float] = None
+
+        # --- Thresholds (Tunable) ---
+        # These represent a full lap. They are fallbacks or sanity checks.
+        # Primary lap detection uses PositionalMemory.
+        self._lap_distance_threshold_cm = 3000.0 # Example: 30 meters track perimeter estimate
+        self._lap_angle_threshold_deg = 400.0   # Slightly > 360 to account for overshoot/oscillation
+
+        # --- Positional Memory Reference ---
+        self._positional_memory: Optional['PositionalMemory'] = None
+
+        logger.debug("LapCounter initialized.")
+
+    def initialize(self, positional_memory: Optional['PositionalMemory'] = None) -> bool:
+        """
+        Initialize the LapCounter with dependencies.
+        Args:
+            positional_memory: Reference to PositionalMemory for comparison.
+        """
+        self._positional_memory = positional_memory
+        self.reset()
+        logger.info("LapCounter initialized with dependencies.")
+        return True
+
+    def reset(self):
+        """Reset the counter to zero laps and clear odometry state."""
+        self.current_lap = 0
+        self.lap_completed_flag = False
+        self._total_distance_traveled_cm = 0.0
+        self._total_angle_turned_deg = 0.0
+        self._last_sensor_data = None
+        self._last_update_time = None
+        logger.debug("LapCounter reset.")
+
+    def update(self, sensor_data: 'SensorData', vision_snapshot: Optional['VisionSnapshot'] = None):
+        """
+        Update the lap counter based on new sensor data (IMU odometry).
+        Checks for lap completion using PositionalMemory if available.
+        Args:
+            sensor_data: Latest sensor data.
+            vision_snapshot: Latest vision data (optional, for future enhancements).
+        """
+        if not sensor_data or not sensor_data.imu_data:
+            logger.warning("LapCounter: update() called with invalid sensor_data.")
+            return
+
+        current_time = time.time()
+
+        # --- 1. Update Odometry (Distance and Angle) ---
+        if self._last_sensor_data is not None and self._last_sensor_data.imu_data:
+            delta_t = current_time - (self._last_update_time if self._last_update_time else current_time)
+            if delta_t > 0: # Prevent division by zero or negative time
+                # --- Distance Estimation ---
+                # Use accelerometer data for more accurate odometry than US sensor changes.
+                # a_x, a_y are in g. Convert to cm/s^2: 1g = 981 cm/s^2
+                # Integrate acceleration twice to get distance: s = 0.5 * a * t^2 (assuming initial vel is small)
+                # This is a simplified model. Real implementation needs velocity estimation and filtering.
+                # For now, a basic approximation using average acceleration:
+                avg_accel_x_g = (self._last_sensor_data.imu_data.accel_x + sensor_data.imu_data.accel_x) / 2.0
+                avg_accel_y_g = (self._last_sensor_data.imu_data.accel_y + sensor_data.imu_data.accel_y) / 2.0
+                avg_accel_x_cm_s2 = avg_accel_x_g * 981.0
+                avg_accel_y_cm_s2 = avg_accel_y_g * 981.0
+                
+                # Estimate distance change (assuming motion is primarily along vehicle's X or Y axis)
+                # This is still quite approximate. A better model would transform to world frame or use gyro.
+                delta_dist_x_cm = 0.5 * avg_accel_x_cm_s2 * (delta_t ** 2)
+                delta_dist_y_cm = 0.5 * avg_accel_y_cm_s2 * (delta_t ** 2)
+                # Use the component that likely represents forward motion (depends on vehicle orientation)
+                # Let's assume X is forward/backward for simplicity here.
+                distance_increment_cm = abs(delta_dist_x_cm) # Use absolute to accumulate total distance
+                
+                # --- Angle Estimation ---
+                # Integrate gyro Z (yaw rate) over time to get change in heading.
+                # gyro_z is in deg/s.
+                avg_gyro_z_deg_s = (self._last_sensor_data.imu_data.gyro_z + sensor_data.imu_data.gyro_z) / 2.0
+                angle_increment_deg = avg_gyro_z_deg_s * delta_t
+
+                # Update cumulative odometry
+                self._total_distance_traveled_cm += distance_increment_cm
+                self._total_angle_turned_deg += angle_increment_deg
+                # logger.debug(f"LapCounter: Dist Inc: {distance_increment_cm:.2f}cm, Angle Inc: {angle_increment_deg:.2f}deg")
+
+        # Update last state
+        self._last_sensor_data = sensor_data
+        self._last_update_time = current_time
+
+        # --- 2. Check for Lap Completion (Primary Method: PositionalMemory) ---
+        # Only check if we have stored initial data and are still counting laps (<3)
+        if (self._positional_memory and self._positional_memory.has_initial_data() and
+            not self.lap_completed_flag and self.current_lap < 3):
+
+            # Compare current state with the stored initial state
+            similarity = self._positional_memory.compare_with_initial(sensor_data, vision_snapshot)
+            
+            # Define a threshold for being "back at start"
+            # This needs tuning. High threshold (e.g., 0.95) means very confident.
+            lap_completion_similarity_threshold = 0.92 # Tunable parameter
+
+            if similarity > lap_completion_similarity_threshold:
+                # We are likely back at the start. Check odometry as a sanity check.
+                odometry_suggests_lap = (
+                    self._total_distance_traveled_cm > (self._lap_distance_threshold_cm * 0.7) or
+                    abs(self._total_angle_turned_deg) > (self._lap_angle_threshold_deg * 0.7)
+                )
+                
+                if odometry_suggests_lap:
+                    logger.info(f"LapCounter: Lap {self.current_lap + 1} completion detected! "
+                                f"(Sim: {similarity:.2f}, Dist: {self._total_distance_traveled_cm:.1f}cm, "
+                                f"Angle: {self._total_angle_turned_deg:.1f}deg)")
+                    self.lap_completed_flag = True # Set flag for main loop
+                else:
+                    logger.debug(f"LapCounter: High similarity ({similarity:.2f}) but odometry low. "
+                                 f"Waiting for more movement evidence.")
+
+        # --- 3. Fallback Check (if PositionalMemory fails or is not ready) ---
+        # This is less robust but provides a backup.
+        # elif (not self.lap_completed_flag and self.current_lap < 3 and
+        #       (self._total_distance_traveled_cm > self._lap_distance_threshold_cm or
+        #        abs(self._total_angle_turned_deg) > self._lap_angle_threshold_deg)):
+        #     logger.info(f"LapCounter: Fallback Lap {self.current_lap + 1} completion detected! "
+        #                 f"(Dist: {self._total_distance_traveled_cm:.1f}cm, "
+        #                 f"Angle: {self._total_angle_turned_deg:.1f}deg)")
+        #     self.lap_completed_flag = True
+
+    def is_lap_completed(self) -> bool:
+        """Check if a lap completion has been detected."""
+        return self.lap_completed_flag
+
+    def acknowledge_lap_completion(self):
+        """Acknowledge that a lap completion has been processed."""
+        if self.lap_completed_flag:
+            self.lap_completed_flag = False
+            self.current_lap += 1
+            # Reset odometry counters for the next lap
+            self._total_distance_traveled_cm = 0.0
+            self._total_angle_turned_deg = 0.0
+            logger.info(f"LapCounter: Lap completion for lap {self.current_lap} acknowledged.")
+
+    def get_current_lap(self) -> int:
+        """Get the current lap number (0-based, 0, 1, 2)."""
+        return self.current_lap
+
+    # Note: is_in_start_section logic is primarily handled by PositionalMemory in main.py
+    # based on the stored initial/pre-stop data. This class focuses on lap counting.
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    import utils.logger
+    utils.logger.setup_logging()
+    lc = LapCounter()
+    print("LapCounter class defined.")
+# navigation/mission_state.py
+
+"""Manages the overall mission state of the vehicle."""
+
+import threading
+import logging
+
+logger = logging.getLogger(__name__)
+
+# --- Enums (Matching C++ enums where possible) ---
+
+class ChallengeType:
+    """Represents the type of challenge."""
+    UNKNOWN = 0
+    OPEN_CHALLENGE = 1
+    OBSTACLE_CHALLENGE = 2
+
+class MissionPhase:
+    """Represents the current phase of the mission."""
+    PRE_START = 0           # Initial state, waiting for button press
+    WAITING_FOR_GO = 1      # Button pressed, waiting for Pi's GO command ack
+    DRIVING_LAPS = 2        # Main driving phase (3 laps)
+    STOPPING_AT_START = 3   # Open Challenge: Stop in start section after 3 laps
+    FINDING_PARKING = 4     # Obstacle Challenge: Navigate to parking lot after 3 laps
+    PARKING = 5             # Obstacle Challenge: Execute parking maneuver
+    EMERGENCY_STOPPED = 6   # Stopped due to E-Stop or error
+    COMPLETED = 7           # Mission finished (vehicle stopped correctly)
+
+class StartPosition:
+    """Represents the starting position/direction (simplified)."""
+    # This could be more complex (e.g., Section 1, Direction Clockwise)
+    # For now, a simple flag or enum might suffice if position is determined dynamically
+    UNKNOWN = 0
+    IDENTIFIED = 1 # Vehicle has figured out its start position
+
+
+class MissionState:
+    """
+    Tracks the overall state of the mission including phase, challenge type,
+    lap count, and positional flags.
+    Thread-safe using a lock.
+    """
+
+    def __init__(self):
+        self._lock = threading.RLock() # Reentrant lock
+
+        # Core State
+        self._challenge_type = ChallengeType.UNKNOWN
+        self._phase = MissionPhase.PRE_START
+        self._start_position = StartPosition.UNKNOWN
+        self._current_lap = 0 # 0-based (0, 1, 2)
+        self._lap_completed = False # Flag for lap completion logic
+        self._in_start_section = False # Flag set by lap counter/navigation
+        self._near_parking_lot = False # Flag set by navigation (Obstacle)
+
+        logger.debug("MissionState initialized.")
+
+    # --- Getters ---
+    def get_challenge_type(self) -> ChallengeType:
+        with self._lock:
+            return self._challenge_type
+
+    def get_phase(self) -> MissionPhase:
+        with self._lock:
+            return self._phase
+
+    def get_start_position(self) -> StartPosition:
+        with self._lock:
+            return self._start_position
+
+    def get_current_lap(self) -> int:
+        with self._lock:
+            return self._current_lap
+
+    def is_lap_completed(self) -> bool:
+        with self._lock:
+            return self._lap_completed
+
+    def is_in_start_section(self) -> bool:
+        with self._lock:
+            return self._in_start_section
+
+    def is_near_parking_lot(self) -> bool:
+        with self._lock:
+            return self._near_parking_lot
+
+    # --- Setters (Thread-safe) ---
+    def set_challenge_type(self, challenge_type: ChallengeType):
+        with self._lock:
+            old_type = self._challenge_type
+            self._challenge_type = challenge_type
+            if old_type != challenge_type:
+                logger.info(f"Challenge type changed from {old_type} to {challenge_type}")
+
+    def set_phase(self, phase: MissionPhase):
+        with self._lock:
+            old_phase = self._phase
+            self._phase = phase
+            if old_phase != phase:
+                logger.info(f"Mission phase changed from {old_phase} to {phase}")
+
+    def set_start_position(self, position: StartPosition):
+        with self._lock:
+            self._start_position = position
+            logger.debug(f"Start position set to {position}")
+
+    def set_current_lap(self, lap: int):
+        with self._lock:
+            self._current_lap = lap
+            logger.debug(f"Current lap set to {lap}")
+
+    def set_lap_completed(self, completed: bool):
+        with self._lock:
+            self._lap_completed = completed
+            logger.debug(f"Lap completed flag set to {completed}")
+
+    def set_in_start_section(self, in_start: bool):
+        with self._lock:
+            self._in_start_section = in_start
+            logger.debug(f"In start section flag set to {in_start}")
+
+    def set_near_parking_lot(self, near: bool):
+        with self._lock:
+            self._near_parking_lot = near
+            logger.debug(f"Near parking lot flag set to {near}")
+
+    # --- Utility Methods ---
+    def is_obstacle_challenge(self) -> bool:
+        return self.get_challenge_type() == ChallengeType.OBSTACLE_CHALLENGE
+
+    def is_open_challenge(self) -> bool:
+        return self.get_challenge_type() == ChallengeType.OPEN_CHALLENGE
+
+    def is_driving_phase(self) -> bool:
+        """Check if the vehicle is in an active driving phase."""
+        phase = self.get_phase()
+        return (
+            phase == MissionPhase.DRIVING_LAPS or
+            phase == MissionPhase.FINDING_PARKING or
+            phase == MissionPhase.PARKING or
+            phase == MissionPhase.STOPPING_AT_START
+        )
+
+    def acknowledge_lap_completion(self):
+        """Acknowledge that a lap completion has been processed."""
+        with self._lock:
+            self._lap_completed = False
+            logger.debug("Lap completion acknowledged.")
+
+    def __str__(self):
+        with self._lock:
+            return (f"MissionState(Phase: {self._phase}, Challenge: {self._challenge_type}, "
+                    f"Lap: {self._current_lap}, InStart: {self._in_start_section}, "
+                    f"NearPark: {self._near_parking_lot})")
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    import utils.logger
+    utils.logger.setup_logging()
+    
+    ms = MissionState()
+    print(ms)
+    ms.set_challenge_type(ChallengeType.OPEN_CHALLENGE)
+    logger.info(f"[Main] Explicitly set challenge type to Open. Current state: {ms}")
+    ms.set_phase(MissionPhase.DRIVING_LAPS)
+    ms.set_current_lap(1)
+    print(ms)
+    print(f"Is Driving Phase? {ms.is_driving_phase()}")
+    print(f"Is Open Challenge? {ms.is_open_challenge()}")
+# navigation/positional_memory.py
+"""Stores and compares positional data for start/stop and parking logic."""
+
+import logging
+from typing import TYPE_CHECKING, Optional
+import numpy as np
+
+if TYPE_CHECKING:
+    from sensors.sensor_data import SensorData
+    from vision.vision_snapshot import VisionSnapshot
+
+logger = logging.getLogger(__name__)
+
+class PositionalMemory:
+    """
+    Stores sensor and vision snapshots at key locations (start, pre-stop, parking entrance).
+    Compares current state to these snapshots to determine location.
+    Mirrors the C++ PositionalMemory class.
+    """
+
+    def __init__(self):
+        self.initial_data_stored = False
+        self.pre_stop_data_stored = False
+        self.parking_entrance_data_stored = False
+
+        self.initial_sensor_data: Optional['SensorData'] = None
+        self.initial_vision_snapshot: Optional['VisionSnapshot'] = None
+
+        self.pre_stop_sensor_data: Optional['SensorData'] = None
+        self.pre_stop_vision_snapshot: Optional['VisionSnapshot'] = None
+
+        self.parking_entrance_sensor_data: Optional['SensorData'] = None
+        self.parking_entrance_vision_snapshot: Optional['VisionSnapshot'] = None
+
+        logger.debug("PositionalMemory initialized.")
+
+    def store_initial_position(self, sensor_snapshot: 'SensorData', vision_snapshot: 'VisionSnapshot'):
+        """
+        Store the initial state when the mission officially starts (after GO signal).
+        This is the reference point for returning after 3 laps.
+        Args:
+            sensor_snapshot: Sensor data at the start.
+            vision_snapshot: Vision data at the start.
+        """
+        self.initial_sensor_data = sensor_snapshot
+        self.initial_vision_snapshot = vision_snapshot
+        self.initial_data_stored = True
+        logger.info("PositionalMemory: Initial position stored.")
+
+    def store_pre_stop_position(self, sensor_snapshot: 'SensorData', vision_snapshot: 'VisionSnapshot'):
+        """
+        Store the position just before attempting to stop in the start section.
+        This might be slightly different from initial due to sensor drift or initial movement.
+        Args:
+            sensor_snapshot: Sensor data at pre-stop.
+            vision_snapshot: Vision data at pre-stop.
+        """
+        self.pre_stop_sensor_data = sensor_snapshot
+        self.pre_stop_vision_snapshot = vision_snapshot
+        self.pre_stop_data_stored = True
+        logger.info("PositionalMemory: Pre-stop position stored.")
+
+    def store_parking_entrance_position(self, sensor_snapshot: 'SensorData', vision_snapshot: 'VisionSnapshot'):
+        """
+        Store the position when entering the parking lot area (Obstacle challenge).
+        Args:
+            sensor_snapshot: Sensor data at parking entrance.
+            vision_snapshot: Vision data at parking entrance.
+        """
+        self.parking_entrance_sensor_data = sensor_snapshot
+        self.parking_entrance_vision_snapshot = vision_snapshot
+        self.parking_entrance_data_stored = True
+        logger.info("PositionalMemory: Parking entrance position stored.")
+
+    def compare_with_initial(self, current_sensor_data: 'SensorData', current_vision_data: 'VisionSnapshot') -> float:
+        """
+        Compare current state with stored initial state.
+        Args:
+            current_sensor_data: Current sensor data.
+            current_vision_data: Current vision data.
+        Returns:
+            float: Similarity score (0.0 to 1.0, 1.0 = identical).
+        """
+        if not self.initial_data_stored:
+            return 0.0
+        sensor_sim = self._calculate_sensor_similarity(self.initial_sensor_data, current_sensor_data)
+        vision_sim = self._calculate_vision_similarity(self.initial_vision_snapshot, current_vision_data)
+        # Simple average, could be weighted
+        return (sensor_sim + vision_sim) / 2.0
+
+    def compare_with_pre_stop(self, current_sensor_data: 'SensorData', current_vision_data: 'VisionSnapshot') -> float:
+        """
+        Compare current state with stored pre-stop state.
+        Args:
+            current_sensor_data: Current sensor data.
+            current_vision_data: Current vision data.
+        Returns:
+            float: Similarity score (0.0 to 1.0, 1.0 = identical).
+        """
+        if not self.pre_stop_data_stored:
+            return 0.0
+        sensor_sim = self._calculate_sensor_similarity(self.pre_stop_sensor_data, current_sensor_data)
+        vision_sim = self._calculate_vision_similarity(self.pre_stop_vision_snapshot, current_vision_data)
+        return (sensor_sim + vision_sim) / 2.0
+
+    def compare_with_parking_entrance(self, current_sensor_data: 'SensorData', current_vision_data: 'VisionSnapshot') -> float:
+        """
+        Compare current state with stored parking entrance state.
+        Args:
+            current_sensor_data: Current sensor data.
+            current_vision_data: Current vision data.
+        Returns:
+            float: Similarity score (0.0 to 1.0, 1.0 = identical).
+        """
+        if not self.parking_entrance_data_stored:
+            return 0.0
+        sensor_sim = self._calculate_sensor_similarity(self.parking_entrance_sensor_data, current_sensor_data)
+        vision_sim = self._calculate_vision_similarity(self.parking_entrance_vision_snapshot, current_vision_data)
+        return (sensor_sim + vision_sim) / 2.0
+
+    def is_likely_at_initial_position(self, current_sensor_data: 'SensorData', current_vision_data: 'VisionSnapshot', threshold: float = 0.8) -> bool:
+        """
+        Check if we are likely back at the initial position (for stopping/parking).
+        Args:
+            current_sensor_data: Current sensor data.
+            current_vision_data: Current vision data.
+            threshold: Similarity threshold (0.0 to 1.0).
+        Returns:
+            bool: True if similarity is above threshold.
+        """
+        similarity = self.compare_with_initial(current_sensor_data, current_vision_data)
+        is_likely = similarity >= threshold
+        if is_likely:
+            logger.debug(f"PositionalMemory: Likely at INITIAL position (Sim: {similarity:.2f} >= {threshold}).")
+        return is_likely
+
+    def is_likely_at_pre_stop_position(self, current_sensor_data: 'SensorData', current_vision_data: 'VisionSnapshot', threshold: float = 0.9) -> bool:
+        """
+        Check if we are likely at the pre-stop position (for fine-tuning stop).
+        Args:
+            current_sensor_data: Current sensor data.
+            current_vision_data: Current vision data.
+            threshold: Similarity threshold (0.0 to 1.0).
+        Returns:
+            bool: True if similarity is above threshold.
+        """
+        similarity = self.compare_with_pre_stop(current_sensor_data, current_vision_data)
+        is_likely = similarity >= threshold
+        if is_likely:
+            logger.debug(f"PositionalMemory: Likely at PRE-STOP position (Sim: {similarity:.2f} >= {threshold}).")
+        return is_likely
+
+    def is_likely_at_parking_entrance(self, current_sensor_data: 'SensorData', current_vision_data: 'VisionSnapshot', threshold: float = 0.8) -> bool:
+        """
+        Check if we are likely at the parking entrance (for initiating parking).
+        Args:
+            current_sensor_data: Current sensor data.
+            current_vision_data: Current vision data.
+            threshold: Similarity threshold (0.0 to 1.0).
+        Returns:
+            bool: True if similarity is above threshold.
+        """
+        similarity = self.compare_with_parking_entrance(current_sensor_data, current_vision_data)
+        is_likely = similarity >= threshold
+        if is_likely:
+            logger.debug(f"PositionalMemory: Likely at PARKING ENTRANCE (Sim: {similarity:.2f} >= {threshold}).")
+        return is_likely
+
+    # --- Helper Functions for Similarity Calculation ---
+    # These are simplified examples. Real implementations would be more sophisticated.
+
+    def _calculate_sensor_similarity(self, data1: 'SensorData', data2: 'SensorData') -> float:
+        """Calculate similarity between two SensorData objects."""
+        if not data1 or not data2:
+            return 0.0
+        try:
+            # Example: Compare US sensor distances
+            us1 = data1.us_data
+            us2 = data2.us_data
+            if not us1 or not us2:
+                return 0.0
+
+            # Normalize differences (e.g., by max expected distance 200cm)
+            max_dist = 200.0
+            diff_front = abs(us1.front_distance - us2.front_distance) / max_dist
+            diff_right = abs(us1.right_distance - us2.right_distance) / max_dist
+            diff_back = abs(us1.back_distance - us2.back_distance) / max_dist
+            diff_left = abs(us1.left_distance - us2.left_distance) / max_dist
+
+            # Similarity is 1 - normalized difference (clamped)
+            sim_front = max(0.0, 1.0 - diff_front)
+            sim_right = max(0.0, 1.0 - diff_right)
+            sim_back = max(0.0, 1.0 - diff_back)
+            sim_left = max(0.0, 1.0 - diff_left)
+
+            # Average similarity
+            return (sim_front + sim_right + sim_back + sim_left) / 4.0
+        except Exception as e:
+            logger.error(f"PositionalMemory: Error calculating sensor similarity: {e}")
+            return 0.0
+
+    def _calculate_vision_similarity(self, data1: 'VisionSnapshot', data2: 'VisionSnapshot') -> float:
+        """Calculate similarity between two VisionSnapshot objects."""
+        if not data1 or not data2:
+            return 0.0
+        try:
+            # Example: Compare average edge positions
+            # Normalize by frame width
+            import config.vehicle_config as cfg
+            frame_width = cfg.CAMERA_WIDTH
+            if frame_width <= 0:
+                return 0.0
+
+            # Handle cases where edge is not detected (-1.0)
+            # If both are -1, consider them similar for that edge.
+            # If one is -1 and the other isn't, not similar.
+            max_edge_diff = frame_width
+
+            def edge_sim(e1, e2):
+                if e1 < 0 and e2 < 0:
+                    return 1.0 # Both not detected
+                elif e1 < 0 or e2 < 0:
+                    return 0.0 # One detected, one not
+                else:
+                    return max(0.0, 1.0 - (abs(e1 - e2) / max_edge_diff))
+
+            edge_left_sim = edge_sim(data1.avg_left_edge_x, data2.avg_left_edge_x)
+            edge_right_sim = edge_sim(data1.avg_right_edge_x, data2.avg_right_edge_x)
+
+            # Example: Compare presence of primary signs
+            sign_sim = 0.0
+            data1_has_left = data1.primary_left_sign is not None
+            data1_has_right = data1.primary_right_sign is not None
+            data2_has_left = data2.primary_left_sign is not None
+            data2_has_right = data2.primary_right_sign is not None
+
+            # Simple check: if both have same sign presence, 1.0, if different, 0.0
+            # More nuanced logic could compare sign types/positions
+            if data1_has_left == data2_has_left and data1_has_right == data2_has_right:
+                sign_sim = 1.0
+            # Could add partial credit for one matching sign
+
+            # Combine edge and sign similarity (weighted average)
+            total_sim = (edge_left_sim + edge_right_sim + sign_sim) / 3.0 # 3 components
+            return total_sim
+
+        except Exception as e:
+            logger.error(f"PositionalMemory: Error calculating vision similarity: {e}")
+            return 0.0
+
+    # Getters for stored data (useful for debugging or navigation)
+    def has_initial_data(self) -> bool:
+        return self.initial_data_stored
+
+    def has_pre_stop_data(self) -> bool:
+        return self.pre_stop_data_stored
+
+    def has_parking_entrance_data(self) -> bool:
+        return self.parking_entrance_data_stored
+
+    def get_initial_sensor_data(self) -> Optional['SensorData']:
+        return self.initial_sensor_data
+
+    def get_initial_vision_data(self) -> Optional['VisionSnapshot']:
+        return self.initial_vision_snapshot
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    import utils.logger
+    utils.logger.setup_logging()
+    pm = PositionalMemory()
+    print("PositionalMemory class defined.")
+# sensors/sensor_data.py
+
+"""Defines data structures for sensor information, matching the C++ structures."""
+
+import struct
+from dataclasses import dataclass
+from typing import Tuple
+
+# --- Sensor Data Structures (High-level, matching C++ SensorData) ---
+
+@dataclass
+class USSensorData:
+    """Represents data from Ultrasonic Sensors."""
+    front_distance: float = 0.0  # Distance in cm (float for precision)
+    right_distance: float = 0.0
+    back_distance: float = 0.0
+    left_distance: float = 0.0
+
+@dataclass
+class IMUData:
+    """Represents data from the IMU (MPU6050)."""
+    # Using floats as they are typically decimal values
+    accel_x: float = 0.0  # Acceleration in g
+    accel_y: float = 0.0
+    accel_z: float = 0.0
+    gyro_x: float = 0.0   # Angular velocity in degrees/s
+    gyro_y: float = 0.0
+    gyro_z: float = 0.0
+    temperature: float = 0.0 # Temperature in Celsius (if sent)
+
+# --- Main Sensor Data Class (High-level) ---
+@dataclass
+class SensorData:
+    """Main container for all sensor data received from the Nano."""
+    us_data: USSensorData = None
+    imu_data: IMUData = None
+
+    def __post_init__(self):
+        # Ensure nested objects are initialized if not provided
+        if self.us_data is None:
+            self.us_data = USSensorData()
+        if self.imu_data is None:
+            self.imu_data = IMUData()
+
+    def __str__(self):
+        return f"SensorData(US: {self.us_data}, IMU: {self.imu_data})"
+
+
+# --- Compact Sensor Data (Matching C++ struct for Serial Protocol) ---
+# C++ struct definition from logtext.txt:
+# struct __attribute__((packed)) CompactSensorData{
+#     uint16_t frontDistance; // 0-65535 cm - 2 bytes
+#     uint16_t rightDistance; // 0-65535 cm - 2 bytes
+#     uint16_t backDistance;  // 0-65535 cm - 2 bytes
+#     uint16_t leftDistance;  // 0-65535 cm - 2 bytes
+#     int16_t accelX;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+#     int16_t accelY;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+#     int16_t accelZ;         // Scaled IMU data (e.g., milli-g) - 2 bytes
+#     int16_t gyroX;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+#     int16_t gyroY;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+#     int16_t gyroZ;          // Scaled IMU data (e.g., milli-deg/s) - 2 bytes
+#     uint8_t checksum;       // 1 byte
+# }; // Total size = 21 bytes
+
+COMPACT_SENSOR_DATA_FORMAT = '<HHHHhhhhhhB' # Little-endian: 4*uint16 + 6*int16 + 1*uint8 = 21 bytes
+COMPACT_SENSOR_DATA_SIZE = struct.calcsize(COMPACT_SENSOR_DATA_FORMAT) # Should be 21
+
+def calculate_checksum(data_bytes: bytes) -> int:
+    """Calculate the checksum (XOR of all bytes)."""
+    checksum = 0
+    for byte_val in data_bytes:
+        checksum ^= byte_val
+    return checksum
+
+def pack_compact_sensor_data(data: SensorData) -> bytes:
+    """
+    Pack SensorData into the compact binary format for serial transmission.
+    Matches the C++ CompactSensorData struct.
+    Note: Scaling factors (e.g., milli-g, milli-deg/s) are assumed.
+    """
+    try:
+        # Scale values to int16_t range
+        # Distances are uint16, so direct conversion to cm (assuming input is in cm)
+        # IMU values are scaled. Common scales: 1000 for milli-units.
+        scaled_front = int(data.us_data.front_distance) # uint16, cm
+        scaled_right = int(data.us_data.right_distance)
+        scaled_back = int(data.us_data.back_distance)
+        scaled_left = int(data.us_data.left_distance)
+        
+        scaled_accel_x = int(data.imu_data.accel_x * 1000) # int16, milli-g
+        scaled_accel_y = int(data.imu_data.accel_y * 1000)
+        scaled_accel_z = int(data.imu_data.accel_z * 1000)
+        scaled_gyro_x = int(data.imu_data.gyro_x * 1000)  # int16, milli-deg/s
+        scaled_gyro_y = int(data.imu_data.gyro_y * 1000)
+        scaled_gyro_z = int(data.imu_data.gyro_z * 1000)
+        
+        # Clamp values to int16 range to prevent struct.pack errors
+        def clamp_int16(val):
+            return max(-32768, min(32767, val))
+            
+        scaled_accel_x = clamp_int16(scaled_accel_x)
+        scaled_accel_y = clamp_int16(scaled_accel_y)
+        scaled_accel_z = clamp_int16(scaled_accel_z)
+        scaled_gyro_x = clamp_int16(scaled_gyro_x)
+        scaled_gyro_y = clamp_int16(scaled_gyro_y)
+        scaled_gyro_z = clamp_int16(scaled_gyro_z)
+        
+        # Clamp distances to uint16 range
+        def clamp_uint16(val):
+            return max(0, min(65535, val))
+        scaled_front = clamp_uint16(scaled_front)
+        scaled_right = clamp_uint16(scaled_right)
+        scaled_back = clamp_uint16(scaled_back)
+        scaled_left = clamp_uint16(scaled_left)
+
+        # Pack data without checksum first
+        packed_data_without_checksum = struct.pack(
+            COMPACT_SENSOR_DATA_FORMAT[:-1], # Exclude the 'B' for checksum
+            scaled_front,
+            scaled_right,
+            scaled_back,
+            scaled_left,
+            scaled_accel_x,
+            scaled_accel_y,
+            scaled_accel_z,
+            scaled_gyro_x,
+            scaled_gyro_y,
+            scaled_gyro_z
+        )
+        
+        # Calculate checksum on the packed data (excluding the checksum byte place)
+        checksum = calculate_checksum(packed_data_without_checksum)
+        
+        # Append checksum
+        final_packed_data = packed_data_without_checksum + bytes([checksum])
+        return final_packed_data
+        
+    except (struct.error, ValueError, OverflowError) as e:
+        print(f"Error packing sensor data: {e}")
+        # Return empty bytes or a specific error indicator?
+        return b''
+
+def unpack_compact_sensor_data(data_bytes: bytes) -> Tuple[SensorData, bool]:
+    """
+    Unpack binary data received via serial into SensorData.
+    Returns (SensorData object, is_valid_checksum).
+    """
+    if len(data_bytes) != COMPACT_SENSOR_DATA_SIZE:
+        print(f"Incorrect data size for unpacking CompactSensorData. Expected {COMPACT_SENSOR_DATA_SIZE}, got {len(data_bytes)}")
+        return SensorData(), False
+
+    try:
+        # Unpack all data including the checksum byte
+        unpacked = struct.unpack(COMPACT_SENSOR_DATA_FORMAT, data_bytes)
+        
+        # Extract values
+        front_dist, right_dist, back_dist, left_dist = unpacked[0:4]
+        accel_x_raw, accel_y_raw, accel_z_raw, gyro_x_raw, gyro_y_raw, gyro_z_raw = unpacked[4:10]
+        received_checksum = unpacked[10]
+
+        # Calculate checksum on the received data excluding the checksum byte
+        calculated_checksum = calculate_checksum(data_bytes[:-1])
+
+        is_valid = (received_checksum == calculated_checksum)
+
+        # Convert back to appropriate units (reverse scaling)
+        sensor_data = SensorData(
+            us_data=USSensorData(
+                front_distance=float(front_dist), # uint16 cm
+                right_distance=float(right_dist),
+                back_distance=float(back_dist),
+                left_distance=float(left_dist)
+            ),
+            imu_data=IMUData(
+                 accel_x=accel_x_raw / 1000.0, # milli-g back to g
+                 accel_y=accel_y_raw / 1000.0,
+                 accel_z=accel_z_raw / 1000.0,
+                 gyro_x=gyro_x_raw / 1000.0,   # milli-deg/s back to deg/s
+                 gyro_y=gyro_y_raw / 1000.0,
+                 gyro_z=gyro_z_raw / 1000.0
+                 # temperature not included in compact data
+            )
+        )
+        return sensor_data, is_valid
+
+    except struct.error as e:
+        print(f"Error unpacking CompactSensorData: {e}")
+        return SensorData(), False
+
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    # Create sample data
+    sample_data = SensorData(
+        us_data=USSensorData(front_distance=15.5, right_distance=20.0, back_distance=10.2, left_distance=25.8),
+        imu_data=IMUData(accel_x=0.1, accel_y=-0.05, accel_z=9.81, gyro_x=0.1, gyro_y=-0.2, gyro_z=15.3)
+    )
+    print("Original Data:", sample_data)
+
+    # Pack it
+    packed = pack_compact_sensor_data(sample_data)
+    print(f"Packed Data ({len(packed)} bytes):", packed.hex())
+    print("Expected Size:", COMPACT_SENSOR_DATA_SIZE)
+
+    # Unpack it
+    if len(packed) == COMPACT_SENSOR_DATA_SIZE:
+        unpacked_data, valid_checksum = unpack_compact_sensor_data(packed)
+        print("Unpacked Data:", unpacked_data)
+        print("Checksum Valid:", valid_checksum)
+    else:
+        print("Packing failed, size mismatch.")
+# utils/logger.py
+
+"""Centralized logging configuration."""
+
+import logging
+import config.vehicle_config as cfg
+
+def setup_logging():
+    """Configure the logging module based on config."""
+    level_name = cfg.LOG_LEVEL.upper()  # Convert to uppercase for consistency
+    level = getattr(logging, level_name, logging.DEBUG)  # Default to DEBUG if invalid
+    if level_name not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+        print(f"[Logger Warning] Invalid LOG_LEVEL '{cfg.LOG_LEVEL}' in config. Defaulting to DEBUG.")
+        level = logging.DEBUG
+
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    # logger = logging.getLogger(__name__)
+    # logger.info(f"Logging configured with level: {cfg.LOG_LEVEL}")
+    print(f"[Logger] Logging initialized with level: {logging.getLevelName(level)} (level_name: {level_name})") # Use print before logger is fully set up
+
+# Convenience functions (optional, if you prefer module-level calls)
+def debug(msg): logging.getLogger().debug(msg)
+def info(msg): logging.getLogger().info(msg)
+def warning(msg): logging.getLogger().warning(msg)
+def error(msg): logging.getLogger().error(msg)
+
+# Example usage in other modules:
+# import utils.logger
+# utils.logger.setup_logging() # Call once in main
+# logger = logging.getLogger(__name__)
+# logger.info("This is an info message")
+# vision/camera_interface.py
+"""Interface to the Raspberry Pi camera using rpicam-vid subprocess."""
+
+import subprocess
+import threading
+import time
+import logging
+import os
+from typing import Optional
+
+# Import our modules
+import config.vehicle_config as cfg
+if __debug__: # Only import if debug mode is enabled (or always for type hints)
+    from vision.frame_buffer import FrameBuffer
+
+logger = logging.getLogger(__name__)
+
+class CameraInterface:
+    """
+    Manages the rpicam-vid process to capture JPEG frames
+    and puts them into a FrameBuffer.
+    Optimized for performance on Pi Zero 2W.
+    """
+
+    def __init__(self, frame_buffer: 'FrameBuffer'):
+        if not frame_buffer:
+            raise ValueError("CameraInterface requires a valid FrameBuffer.")
+        self.frame_buffer = frame_buffer
+
+        self._process: Optional[subprocess.Popen] = None
+        self._capture_thread: Optional[threading.Thread] = None
+        self._stop_capture = threading.Event()
+        self._is_capturing = False
+
+        # Camera parameters - can be tuned for performance vs. quality
+        # Lower resolution and FPS can significantly improve processing speed
+        self.width = cfg.CAMERA_WIDTH # e.g., 320
+        self.height = cfg.CAMERA_HEIGHT # e.g., 240
+        self.fps = cfg.CAMERA_FPS # e.g., 20 or 15
+        self.device = cfg.CAMERA_DEVICE # For libcamera, specify sensor
+
+        logger.info(f"CameraInterface initialized (W: {self.width}, H: {self.height}, FPS: {self.fps}).")
+
+    def start_capture(self) -> bool:
+        """
+        Starts the rpicam-vid subprocess and the capture thread.
+        """
+        if self._is_capturing:
+            logger.warning("CameraInterface: Capture already running.")
+            return False
+
+        try:
+            # --- OPTIMIZED rpicam-vid COMMAND ---
+            # -t 0: Run indefinitely
+            # --inline: Embed JPEG headers for easier decoding
+            # --nopreview: No on-screen preview to save resources
+            # --timeout 0: Alias for -t 0
+            # --width, --height, --framerate: Set capture parameters
+            # --awbgainred, --awbgainblue: Fixed AWB can be faster than auto
+            # --brightness, --contrast, --saturation: Tune for better initial image
+            # --roi: Can specify a digital zoom/ROI at capture time (e.g., 0,0.3,1,0.4)
+            cmd = [
+                "rpicam-vid", "-t", "0", "--inline", "--nopreview",
+                "-o", "-", "--width", str(self.width), "--height", str(self.height),
+                "--framerate", str(self.fps)
+                # Add more tuning options if needed:
+                # "--awbgains", "1.2,1.0", # Example fixed AWB
+                # "--roi", "0,0.3,1,0.4" # Example ROI crop at capture
+            ]
+            if self.device:
+                 cmd.extend(["--camera", self.device])
+
+            logger.info(f"CameraInterface: Starting capture with command: {' '.join(cmd)}")
+            
+            # Use preexec_fn for clean process group management
+            # bufsize=0 for unbuffered, or a small positive value. 1 is line-buffered (text).
+            # For binary streams like this, unbuffered or a small buffer might be better.
+            # Let's use default buffering for now, or a small buffer like 8192.
+            self._process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, # Capture stderr
+                # bufsize=8192, # Use a small buffer
+                preexec_fn=os.setsid
+            )
+            
+            self._stop_capture.clear()
+            # Start capture thread with high priority if possible (not easily done in Python standard lib)
+            # Daemon=True ensures it doesn't prevent main program exit
+            self._capture_thread = threading.Thread(target=self._capture_loop, daemon=True, name="CameraCaptureThread")
+            self._capture_thread.start()
+            self._is_capturing = True
+            logger.info("CameraInterface: Capture started successfully.")
+            return True
+
+        except Exception as e:
+            logger.error(f"CameraInterface: Failed to start capture: {e}", exc_info=True)
+            self._is_capturing = False
+            if self._process:
+                self._terminate_process()
+            return False
+
+    def stop_capture(self):
+        """Stops the capture process and thread."""
+        if not self._is_capturing:
+            return
+
+        logger.info("CameraInterface: Stopping capture...")
+        self._stop_capture.set()
+
+        if self._capture_thread and self._capture_thread.is_alive():
+            self._capture_thread.join(timeout=2.0)
+            if self._capture_thread.is_alive():
+                logger.warning("CameraInterface: Capture thread did not stop gracefully.")
+
+        if self._process:
+            self._terminate_process()
+
+        self._is_capturing = False
+        self.frame_buffer.clear()
+        logger.info("CameraInterface: Capture stopped.")
+
+    def _terminate_process(self):
+        """Terminate the rpicam-vid process cleanly."""
+        try:
+            os.killpg(os.getpgid(self._process.pid), 15) # SIGTERM
+            self._process.wait(timeout=1.5)
+        except (subprocess.TimeoutExpired, ProcessLookupError, PermissionError):
+            try:
+                os.killpg(os.getpgid(self._process.pid), 9) # SIGKILL
+            except (ProcessLookupError, PermissionError):
+                pass
+        except Exception as e:
+            logger.error(f"CameraInterface: Error terminating process: {e}")
+        finally:
+            self._process = None
+
+    def is_running(self) -> bool:
+        return self._is_capturing
+
+    def _capture_loop(self):
+        """Optimized background thread for reading JPEG data."""
+        logger.debug("CameraInterface: Capture loop started.")
+        
+        if not self._process or not self._process.stdout:
+            logger.error("CameraInterface: Process or stdout is None in capture loop.")
+            return
+
+        jpeg_data = bytearray()
+        previous_byte = 0
+        SOI_MARKER = 0xD8
+        EOI_MARKER = 0xD9
+        state = "FIND_SOI"
+
+        try:
+            while not self._stop_capture.is_set():
+                # Read in larger chunks for efficiency on Pi
+                chunk = self._process.stdout.read(8192) # Increased chunk size
+                if not chunk:
+                    logger.debug("CameraInterface: EOF reached on stdout.")
+                    break
+
+                # --- DEBUG: Log data received from rpicam-vid ---
+                logger.debug(f"CameraInterface: Read {len(chunk)} bytes from rpicam-vid subprocess.")
+                # --- END DEBUG ---
+
+                for byte_val in chunk:
+                    if state == "FIND_SOI":
+                        if previous_byte == 0xFF and byte_val == SOI_MARKER:
+                            jpeg_data.clear()
+                            jpeg_data.extend([0xFF, SOI_MARKER])
+                            state = "ACCUMULATE"
+                            # --- DEBUG: Log SOI found ---
+                            logger.debug("CameraInterface: SOI found, starting JPEG accumulation.")
+                            # --- END DEBUG ---
+                        previous_byte = byte_val
+
+                    elif state == "ACCUMULATE":
+                        jpeg_data.append(byte_val)
+                        if previous_byte == 0xFF and byte_val == EOI_MARKER:
+                            # Found complete JPEG
+                            # Put JPEG bytes directly into buffer
+                            # --- DEBUG: Log EOI and frame size ---
+                            logger.debug(f"CameraInterface: EOI found, JPEG size: {len(jpeg_data)} bytes.")
+                            # --- END DEBUG ---
+                            self.frame_buffer.put(bytes(jpeg_data)) # bytes() copies the bytearray
+                            # Consider: self.frame_buffer.put(jpeg_data) if FrameBuffer can handle bytearray
+                            # and you want to avoid the copy. But bytearray is mutable.
+                            state = "FIND_SOI"
+                        elif len(jpeg_data) > 5 * 1024 * 1024: # 5MB sanity limit
+                            logger.warning("CameraInterface: JPEG too large, discarding.")
+                            state = "FIND_SOI"
+                            jpeg_data.clear()
+                        previous_byte = byte_val
+
+                # Minimal sleep to prevent excessive CPU spin if read is very fast
+                # time.sleep(0.0001) # 0.1ms - often not needed with blocking read
+
+        except Exception as e:
+            logger.error(f"CameraInterface: Error in capture loop: {e}", exc_info=True)
+        finally:
+            logger.debug("CameraInterface: Capture loop finished.")
+
+
+# Example usage (if run as script - needs mocks)
+if __name__ == "__main__":
+    import utils.logger
+    utils.logger.setup_logging()
+    
+    # This would typically be tested with actual FrameBuffer and main application flow
+    print("CameraInterface class defined.")# vision/color_detector.py
+"""Detects red and green traffic signs in an HSV image."""
+
+import cv2
+import numpy as np
+import logging
+from typing import Tuple, Optional
+
+logger = logging.getLogger(__name__)
+
+class ColorDetector:
+    """
+    Detects red and green traffic signs using HSV color thresholding and contour analysis.
+    """
+
+    def __init__(self):
+        # --- Default HSV Ranges (NEEDS CALIBRATION) ---
+        # These are starting points, should be calibrated per environment.
+        # WRO Rules specify RGB(238, 39, 55) for Red and RGB(68, 214, 44) for Green.
+        # Converting to approximate HSV ranges (using online converters or experimentation):
+        
+        # Red can be tricky due to HSV wrap-around (H near 0 and 180)
+        self.lower_red1 = np.array([0, 100, 50])   # Lower range for red (H 0-10)
+        self.upper_red1 = np.array([10, 255, 255])
+        self.lower_red2 = np.array([170, 100, 50]) # Upper range for red (H 170-180)
+        self.upper_red2 = np.array([180, 255, 255])
+
+        self.lower_green = np.array([40, 100, 50])  # Lower range for green (H 40-80)
+        self.upper_green = np.array([80, 255, 255]) # Upper range for green
+
+        # --- Advanced Filtering Parameters ---
+        self.min_area_threshold = 500.0  # Minimum contour area (pixels)
+        self.min_aspect_ratio = 0.5      # Min width/height
+        self.max_aspect_ratio = 2.0      # Max width/height
+        self.min_solidity = 0.6          # Min ratio of contour area to its convex hull area
+        self.min_extent = 0.4            # Min ratio of contour area to bounding rectangle area
+
+        logger.debug("ColorDetector initialized with default parameters.")
+
+    def set_hsv_ranges(self, lower_red1, upper_red1, lower_red2, upper_red2, lower_green, upper_green):
+        """Set custom HSV ranges for detection."""
+        self.lower_red1, self.upper_red1 = np.array(lower_red1), np.array(upper_red1)
+        self.lower_red2, self.upper_red2 = np.array(lower_red2), np.array(upper_red2)
+        self.lower_green, self.upper_green = np.array(lower_green), np.array(upper_green)
+        logger.debug("ColorDetector HSV ranges updated.")
+
+    def set_filtering_parameters(self, min_area=None, min_ar=None, max_ar=None, min_solidity=None, min_extent=None):
+        """Set advanced filtering parameters."""
+        if min_area is not None: self.min_area_threshold = min_area
+        if min_ar is not None: self.min_aspect_ratio = min_ar
+        if max_ar is not None: self.max_aspect_ratio = max_ar
+        if min_solidity is not None: self.min_solidity = min_solidity
+        if min_extent is not None: self.min_extent = min_extent
+        logger.debug("ColorDetector filtering parameters updated.")
+
+    def _filter_contour(self, contour) -> bool:
+        """
+        Apply advanced geometric filters to a contour.
+        Args:
+            contour: The contour to filter.
+        Returns:
+            bool: True if the contour passes the filters, False otherwise.
+        """
+        area = cv2.contourArea(contour)
+        if area < self.min_area_threshold:
+            return False
+
+        x, y, w, h = cv2.boundingRect(contour)
+        aspect_ratio = float(w) / h if h > 0 else 0
+        if not (self.min_aspect_ratio <= aspect_ratio <= self.max_aspect_ratio):
+            return False
+
+        hull = cv2.convexHull(contour)
+        hull_area = cv2.contourArea(hull)
+        if hull_area > 0:
+            solidity = float(area) / hull_area
+            if solidity < self.min_solidity:
+                return False
+
+        rect_area = w * h
+        if rect_area > 0:
+            extent = float(area) / rect_area
+            if extent < self.min_extent:
+                return False
+
+        # Add more filters if needed (e.g., circularity for circles)
+        return True
+
+    def detect_red_sign(self, hsv_frame: np.ndarray) -> Tuple[bool, Optional[Tuple[int, int]], float, Tuple[int, int, int, int], int]:
+        """
+        Detect a red traffic sign in the HSV frame.
+        Args:
+            hsv_frame: The input image in HSV color space.
+        Returns:
+            Tuple: (found: bool, centroid: (x,y) or None, confidence: float, bbox: (x,y,w,h), area: int)
+        """
+        try:
+            # Threshold the HSV image to get only red colors
+            mask1 = cv2.inRange(hsv_frame, self.lower_red1, self.upper_red1)
+            mask2 = cv2.inRange(hsv_frame, self.lower_red2, self.upper_red2)
+            mask_red = cv2.bitwise_or(mask1, mask2)
+
+            # Find contours
+            contours, _ = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            best_area = 0
+            best_contour = None
+            for cnt in contours:
+                if self._filter_contour(cnt):
+                    area = cv2.contourArea(cnt)
+                    if area > best_area:
+                        best_area = area
+                        best_contour = cnt
+
+            if best_contour is not None:
+                # Calculate centroid using moments
+                m = cv2.moments(best_contour)
+                if m["m00"] != 0:
+                    cx = int(m["m10"] / m["m00"])
+                    cy = int(m["m01"] / m["m00"])
+                    centroid = (cx, cy)
+                else:
+                    # Fallback centroid
+                    x, y, w, h = cv2.boundingRect(best_contour)
+                    centroid = (x + w // 2, y + h // 2)
+
+                x, y, w, h = cv2.boundingRect(best_contour)
+                bbox = (x, y, w, h)
+                
+                # Simple confidence based on area (can be refined)
+                # Normalize by image area or use a max expected area
+                confidence = min(1.0, best_area / 5000.0) # Example normalization
+
+                return True, centroid, confidence, bbox, int(best_area)
+
+            return False, None, 0.0, (0, 0, 0, 0), 0
+
+        except Exception as e:
+            logger.error(f"ColorDetector: Error detecting red sign: {e}")
+            return False, None, 0.0, (0, 0, 0, 0), 0
+
+    def detect_green_sign(self, hsv_frame: np.ndarray) -> Tuple[bool, Optional[Tuple[int, int]], float, Tuple[int, int, int, int], int]:
+        """
+        Detect a green traffic sign in the HSV frame.
+        Args:
+            hsv_frame: The input image in HSV color space.
+        Returns:
+            Tuple: (found: bool, centroid: (x,y) or None, confidence: float, bbox: (x,y,w,h), area: int)
+        """
+        try:
+            # Threshold the HSV image to get only green colors
+            mask_green = cv2.inRange(hsv_frame, self.lower_green, self.upper_green)
+
+            # Find contours
+            contours, _ = cv2.findContours(mask_green, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            best_area = 0
+            best_contour = None
+            for cnt in contours:
+                if self._filter_contour(cnt):
+                    area = cv2.contourArea(cnt)
+                    if area > best_area:
+                        best_area = area
+                        best_contour = cnt
+
+            if best_contour is not None:
+                m = cv2.moments(best_contour)
+                if m["m00"] != 0:
+                    cx = int(m["m10"] / m["m00"])
+                    cy = int(m["m01"] / m["m00"])
+                    centroid = (cx, cy)
+                else:
+                    x, y, w, h = cv2.boundingRect(best_contour)
+                    centroid = (x + w // 2, y + h // 2)
+
+                x, y, w, h = cv2.boundingRect(best_contour)
+                bbox = (x, y, w, h)
+                
+                confidence = min(1.0, best_area / 5000.0) # Example normalization
+
+                return True, centroid, confidence, bbox, int(best_area)
+
+            return False, None, 0.0, (0, 0, 0, 0), 0
+
+        except Exception as e:
+            logger.error(f"ColorDetector: Error detecting green sign: {e}")
+            return False, None, 0.0, (0, 0, 0, 0), 0
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    # This would typically be tested with actual images
+    print("ColorDetector class defined.")
+# vision/edge_detector.py
+"""Detects track edges using Canny edge detection and HoughLinesP."""
+
+import cv2
+import numpy as np
+import logging
+from typing import List, Tuple
+
+logger = logging.getLogger(__name__)
+
+class EdgeDetector:
+    """
+    Detects track edges using Canny edge detection and the Hough transform.
+    """
+
+    def __init__(self):
+        # --- Canny Edge Detection Parameters ---
+        self.canny_low_threshold = 50
+        self.canny_high_threshold = 150
+        self.canny_aperture_size = 3 # Must be 3, 5, or 7
+
+        # --- Hough Line Transform Parameters ---
+        self.hough_rho = 1.0          # Distance resolution in pixels
+        self.hough_theta = np.pi / 180 # Angle resolution in radians
+        self.hough_threshold = 50      # Minimum votes for a line
+        self.hough_min_line_length = 30 # Minimum line length
+        self.hough_max_line_gap = 10   # Maximum gap between line segments
+
+        # --- ROI and Filtering ---
+        self.vertical_scanlines = 20 # Number of vertical slices to analyze for average edge
+        self.min_line_strength = 10  # Minimum accumulator value for line strength
+
+        logger.debug("EdgeDetector initialized with default parameters.")
+
+    def set_canny_parameters(self, low, high, aperture_size=3):
+        """Set Canny edge detection parameters."""
+        self.canny_low_threshold = low
+        self.canny_high_threshold = high
+        self.canny_aperture_size = aperture_size
+        logger.debug("EdgeDetector Canny parameters updated.")
+
+    def set_hough_parameters(self, rho, theta, threshold, min_len, max_gap):
+        """Set HoughLinesP parameters."""
+        self.hough_rho = rho
+        self.hough_theta = theta
+        self.hough_threshold = threshold
+        self.hough_min_line_length = min_len
+        self.hough_max_line_gap = max_gap
+        logger.debug("EdgeDetector Hough parameters updated.")
+
+    def detect_edges_and_lines(self, gray_frame: np.ndarray) -> List[Tuple[int, int, int, int, float, float, float]]:
+        """
+        Detect edges and lines in a grayscale frame.
+        Args:
+            gray_frame: Input grayscale image (ROI).
+        Returns:
+            List of tuples: (x1, y1, x2, y2, length, angle_rad, strength)
+        """
+        try:
+            # 1. Apply Gaussian Blur to reduce noise (optional but often helpful)
+            # blurred = cv2.GaussianBlur(gray_frame, (5, 5), 0)
+
+            # 2. Canny Edge Detection
+            edges = cv2.Canny(gray_frame, self.canny_low_threshold, self.canny_high_threshold, apertureSize=self.canny_aperture_size)
+
+            # 3. Hough Line Transform (Probabilistic)
+            lines = cv2.HoughLinesP(
+                edges,
+                rho=self.hough_rho,
+                theta=self.hough_theta,
+                threshold=self.hough_threshold,
+                minLineLength=self.hough_min_line_length,
+                maxLineGap=self.hough_max_line_gap
+            )
+
+            processed_lines = []
+            if lines is not None:
+                for line in lines:
+                    x1, y1, x2, y2 = line[0]
+                    # Calculate line properties
+                    length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                    angle = np.arctan2(y2 - y1, x2 - x1) # Angle in radians
+                    # Strength could be the accumulator value (threshold), or length-based
+                    strength = length # Simple strength measure
+
+                    if strength >= self.min_line_strength:
+                        processed_lines.append((x1, y1, x2, y2, length, angle, strength))
+            
+            return processed_lines
+
+        except Exception as e:
+            logger.error(f"EdgeDetector: Error detecting edges/lines: {e}")
+            return []
+
+    def calculate_average_edge_x(self, gray_frame: np.ndarray, side: str = 'both') -> Tuple[float, float, List[Tuple[int, int, int, int, float, float, float]]]:
+        """
+        Calculates the average X position of vertical edges (track boundaries).
+        Args:
+            gray_frame: Input grayscale image (ROI).
+            side: 'left', 'right', or 'both'.
+        Returns:
+            Tuple: (avg_x: float, std_x: float, detected_lines: List[...])
+                   avg_x is -1.0 if not found reliably.
+        """
+        detected_lines = self.detect_edges_and_lines(gray_frame)
+        
+        if not detected_lines:
+            return -1.0, 0.0, detected_lines
+
+        height, width = gray_frame.shape
+        # Define vertical scanlines
+        scanline_positions = np.linspace(0, width - 1, self.vertical_scanlines, dtype=int)
+        
+        edge_points_x = [] # Store X coordinates of detected edges
+
+        for x_pos in scanline_positions:
+            # For each vertical scanline, find intersections with detected lines
+            for x1, y1, x2, y2, length, angle, strength in detected_lines:
+                # Check if line segment crosses the vertical scanline
+                if min(x1, x2) <= x_pos <= max(x1, x2) and abs(x2 - x1) > 1e-5: # Avoid division by zero
+                    # Calculate Y intersection point
+                    y_intersect = y1 + (x_pos - x1) * (y2 - y1) / (x2 - x1)
+                    y_int = int(y_intersect)
+                    # Check if intersection is within image bounds
+                    if 0 <= y_int < height:
+                        edge_points_x.append(x_pos) # We know the X, this is just confirming it's an edge
+                        # A more precise method would interpolate the exact X on the line
+                        # at the point where it crosses the scanline perpendicularly.
+                        # For simplicity, we use the scanline X.
+
+        if not edge_points_x:
+            return -1.0, 0.0, detected_lines
+
+        # Filter points based on side
+        filtered_x = []
+        if side == 'left':
+            filtered_x = [x for x in edge_points_x if x < width * 0.4] # Arbitrary left 40%
+        elif side == 'right':
+            filtered_x = [x for x in edge_points_x if x > width * 0.6] # Arbitrary right 40%
+        else: # both or any
+            filtered_x = edge_points_x
+
+        if not filtered_x:
+             return -1.0, 0.0, detected_lines
+
+        avg_x = float(np.mean(filtered_x))
+        std_x = float(np.std(filtered_x))
+        
+        return avg_x, std_x, detected_lines
+
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    # This would typically be tested with actual images
+    print("EdgeDetector class defined.")
+# vision/frame_buffer.py (Efficiency Check)
+"""Thread-safe frame buffer (queue) for inter-thread communication."""
+
+import queue
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+class FrameBuffer:
+    """
+    A thread-safe queue to hold image frames (JPEG bytes).
+    """
+
+    def __init__(self, maxsize: int = 5): # Reduced maxsize for lower memory on Pi Zero
+        """
+        Args:
+            maxsize (int): Maximum number of frames. Oldest discarded if full.
+        """
+        # Use a small maxsize to prevent memory buildup and force newer frames
+        self._queue = queue.Queue(maxsize=maxsize)
+        self.maxsize = maxsize
+        logger.debug(f"FrameBuffer initialized with maxsize {maxsize}.")
+
+    def put(self, frame_data: bytes):
+        """Put a frame into the buffer, discarding oldest if full."""
+        try:
+            self._queue.put_nowait(frame_data)
+            logger.debug(f"FrameBuffer: Put frame ({len(frame_data)} bytes). Buffer size: {self.qsize()}")
+        except queue.Full:
+            try:
+                self._queue.get_nowait() # Discard oldest
+                self._queue.put_nowait(frame_data) # Add new
+                logger.debug("FrameBuffer: Discarded oldest frame to make space for new.")
+            except (queue.Empty, queue.Full):
+                logger.warning("FrameBuffer: Unexpected state during put(Full/Empty).")
+
+    def get(self, timeout: Optional[float] = None) -> Optional[bytes]:
+        """Get a frame from the buffer."""
+        try:
+            data = self._queue.get(timeout=timeout)
+            logger.debug(f"FrameBuffer: Got frame ({len(data)} bytes). Buffer size: {self.qsize()}")
+            return data
+        except queue.Empty:
+            logger.debug("FrameBuffer: Get timed out or buffer empty.")
+            return None
+
+    def empty(self) -> bool:
+        return self._queue.empty()
+
+    def qsize(self) -> int:
+        return self._queue.qsize()
+
+    def clear(self):
+        """Clear all frames."""
+        while not self._queue.empty():
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                break
+        # logger.debug("FrameBuffer cleared.")
+# vision/image_processor.py (Performance Refinement)
+"""Processes image frames for signs and edges, producing VisionSnapshots. Optimized."""
+
+import cv2
+import numpy as np
+import threading
+import time
+import logging
+from typing import Optional
+
+import config.vehicle_config as cfg
+from vision.frame_buffer import FrameBuffer
+from vision.vision_snapshot import VisionSnapshot, DetectedSign, DetectedEdgeLine
+from vision.color_detector import ColorDetector
+from vision.edge_detector import EdgeDetector
+
+logger = logging.getLogger(__name__)
+
+class ImageProcessor:
+    """
+    Pulls frames, decodes, detects features, produces VisionSnapshots.
+    Runs in a separate thread. Optimized for Pi Zero 2W.
+    """
+
+    def __init__(self, frame_buffer: FrameBuffer):
+        if not frame_buffer:
+            raise ValueError("ImageProcessor requires a valid FrameBuffer.")
+        self.frame_buffer = frame_buffer
+
+        self._is_initialized = False
+        self._is_processing = False
+        self._stop_processing = threading.Event()
+        self._processing_thread: Optional[threading.Thread] = None
+
+        self._latest_snapshot = VisionSnapshot()
+        self._snapshot_lock = threading.Lock()
+        self._new_snapshot_available = False
+
+        # Processing components - initialize once
+        self.color_detector = ColorDetector()
+        self.edge_detector = EdgeDetector()
+
+        # --- PERFORMANCE: Pre-define ROI ---
+        # These will be scaled based on the actual frame size in processFrame
+        self._base_roi_x = 0
+        self._base_roi_y = int(cfg.CAMERA_HEIGHT * 0.3) # Exclude top 30%
+        self._base_roi_width = cfg.CAMERA_WIDTH
+        self._base_roi_height = int(cfg.CAMERA_HEIGHT * 0.5) # Use middle 50%
+        self._current_roi = (self._base_roi_x, self._base_roi_y, self._base_roi_width, self._base_roi_height)
+
+        logger.info("ImageProcessor initialized.")
+
+    def initialize(self) -> bool:
+        """Perform initialization."""
+        # Potentially load tuned parameters here
+        self._is_initialized = True
+        logger.debug("ImageProcessor: Initialized.")
+        return True
+
+    def start_processing(self) -> bool:
+        """Starts the image processing thread."""
+        if not self._is_initialized:
+            logger.error("ImageProcessor: Cannot start, not initialized.")
+            return False
+        if self._is_processing:
+            logger.warning("ImageProcessor: Processing already running.")
+            return False
+
+        self._stop_processing.clear()
+        # Use a specific name for the thread for debugging
+        self._processing_thread = threading.Thread(target=self._processing_loop, daemon=True, name="ImageProcessingThread")
+        self._processing_thread.start()
+        self._is_processing = True
+        logger.info("ImageProcessor: Processing started.")
+        return True
+
+    def stop_processing(self):
+        """Stops the image processing thread."""
+        if not self._is_processing:
+            return
+
+        logger.info("ImageProcessor: Stopping processing...")
+        self._stop_processing.set()
+
+        if self._processing_thread and self._processing_thread.is_alive():
+            self._processing_thread.join(timeout=2.0)
+            if self._processing_thread.is_alive():
+                logger.warning("ImageProcessor: Processing thread did not stop gracefully.")
+
+        self._is_processing = False
+        logger.info("ImageProcessor: Processing stopped.")
+
+    def is_running(self) -> bool:
+        return self._is_processing
+
+    def get_latest_snapshot(self) -> Optional[VisionSnapshot]:
+        """Get the latest VisionSnapshot."""
+        with self._snapshot_lock:
+            if self._new_snapshot_available:
+                self._new_snapshot_available = False
+                # Return a copy to prevent race conditions if processing updates it
+                # Deep copy of lists is important
+                return VisionSnapshot(
+                    timestamp=self._latest_snapshot.timestamp,
+                    left_signs=self._latest_snapshot.left_signs.copy(),
+                    right_signs=self._latest_snapshot.right_signs.copy(),
+                    left_edge_lines=[l for l in self._latest_snapshot.left_edge_lines], # Shallow copy of list of immutable tuples
+                    right_edge_lines=[l for l in self._latest_snapshot.right_edge_lines],
+                    avg_left_edge_x=self._latest_snapshot.avg_left_edge_x,
+                    avg_right_edge_x=self._latest_snapshot.avg_right_edge_x,
+                    left_edge_std=self._latest_snapshot.left_edge_std,
+                    right_edge_std=self._latest_snapshot.right_edge_std,
+                    frame_id=self._latest_snapshot.frame_id,
+                    processing_time_ms=self._latest_snapshot.processing_time_ms,
+                    signs_searched=self._latest_snapshot.signs_searched,
+                    edges_searched=self._latest_snapshot.edges_searched
+                )
+            else:
+                return None
+
+    def _processing_loop(self):
+        """Optimized background processing loop."""
+        logger.debug("ImageProcessor: Processing loop started.")
+        frame_counter = 0
+
+        try:
+            while not self._stop_processing.is_set():
+                logger.debug("ImageProcessor: Attempting to get frame from buffer...")
+                # Get frame with a short timeout to allow checking stop flag
+                jpeg_data = self.frame_buffer.get(timeout=0.05) # 50ms timeout
+                if jpeg_data is None:
+                    logger.debug("ImageProcessor: Frame buffer get timed out.")
+                    continue # Timeout or no frame, loop again
+                logger.debug("ImageProcessor: Got frame ({len(jpeg_data)} bytes) from buffer.")
+                frame_counter += 1
+                start_time = time.perf_counter() # Use perf_counter for better precision
+                logger.debug(f"ImageProcessor: Got frame {frame_counter} ({len(jpeg_data)} bytes) from buffer.")
+
+                # --- PERFORMANCE: Efficient JPEG Decoding ---
+                # np.frombuffer creates a view, cv2.imdecode decodes in place
+                np_arr = np.frombuffer(jpeg_data, np.uint8)
+                # Use IMREAD_COLOR for BGR (OpenCV default), or IMREAD_GRAYSCALE if only gray needed later
+                frame_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+                if frame_bgr is None:
+                    logger.warning(f"ImageProcessor: Failed to decode frame {frame_counter}.")
+                    continue
+
+                # --- PERFORMANCE: Dynamic ROI based on frame size ---
+                h, w = frame_bgr.shape[:2]
+                logger.debug(f"ImageProcessor: Frame {frame_counter} decoded ({w}x{h}). Applying ROI: {self._current_roi}")
+                # Scale ROI if frame size differs from config (though it shouldn't if rpicam-vid is set correctly)
+                scale_x = w / cfg.CAMERA_WIDTH if cfg.CAMERA_WIDTH > 0 else 1
+                scale_y = h / cfg.CAMERA_HEIGHT if cfg.CAMERA_HEIGHT > 0 else 1
+                roi_x = int(self._base_roi_x * scale_x)
+                roi_y = int(self._base_roi_y * scale_y)
+                roi_w = int(self._base_roi_width * scale_x)
+                roi_h = int(self._base_roi_height * scale_y)
+                # Ensure ROI is within bounds
+                roi_x = max(0, roi_x)
+                roi_y = max(0, roi_y)
+                roi_w = min(w - roi_x, roi_w)
+                roi_h = min(h - roi_y, roi_h)
+                self._current_roi = (roi_x, roi_y, roi_w, roi_h)
+
+                # --- PERFORMANCE: Apply ROI ---
+                if roi_w > 0 and roi_h > 0:
+                    roi_frame_bgr = frame_bgr[roi_y:roi_y + roi_h, roi_x:roi_x + roi_w]
+                else:
+                    logger.warning(f"ImageProcessor: Invalid ROI for frame {frame_counter}.")
+                    continue
+
+                # --- PERFORMANCE: Convert Color Spaces ONCE ---
+                # Convert ROI BGR to HSV for color detection
+                hsv_roi = cv2.cvtColor(roi_frame_bgr, cv2.COLOR_BGR2HSV)
+                # Convert ROI BGR to Grayscale for edge detection
+                gray_roi = cv2.cvtColor(roi_frame_bgr, cv2.COLOR_BGR2GRAY)
+
+                # --- Create and Populate Snapshot ---
+                snapshot = VisionSnapshot()
+                snapshot.frame_id = frame_counter
+                snapshot.timestamp = time.time() # Or start_time if you prefer
+
+                # --- PERFORMANCE: Parallel-like Processing ---
+                # While Python threads are limited by GIL for CPU-bound tasks,
+                # I/O and calls to C-extensions (like OpenCV) can run in parallel.
+                # The detection functions are mostly C++ OpenCV calls, so threading can help
+                # with I/O wait or context switches.
+
+                # Detect Signs (Color)
+                snapshot.signs_searched = True
+                # These calls are mostly in C++, so GIL is released during computation
+                red_found, red_centroid, red_conf, red_bbox, red_area = self.color_detector.detect_red_sign(hsv_roi)
+                green_found, green_centroid, green_conf, green_bbox, green_area = self.color_detector.detect_green_sign(hsv_roi)
+
+                if red_found:
+                    # Adjust centroid and bbox coordinates relative to full frame
+                    adj_centroid = (red_centroid[0] + roi_x, red_centroid[1] + roi_y) if red_centroid else (0, 0)
+                    adj_bbox = (red_bbox[0] + roi_x, red_bbox[1] + roi_y, red_bbox[2], red_bbox[3])
+                    sign = DetectedSign(
+                        sign_type=DetectedSign.SignType.RIGHT,
+                        bbox=adj_bbox,
+                        confidence=red_conf,
+                        centroid=adj_centroid,
+                        area=red_area
+                    )
+                    snapshot.right_signs.append(sign)
+
+                if green_found:
+                    adj_centroid = (green_centroid[0] + roi_x, green_centroid[1] + roi_y) if green_centroid else (0, 0)
+                    adj_bbox = (green_bbox[0] + roi_x, green_bbox[1] + roi_y, green_bbox[2], green_bbox[3])
+                    sign = DetectedSign(
+                        sign_type=DetectedSign.SignType.LEFT,
+                        bbox=adj_bbox,
+                        confidence=green_conf,
+                        centroid=adj_centroid,
+                        area=green_area
+                    )
+                    snapshot.left_signs.append(sign)
+
+                # Detect Edges (Canny + Hough)
+                snapshot.edges_searched = True
+                # Calculate average edge positions and get lines
+                avg_left_x, left_std, left_lines = self.edge_detector.calculate_average_edge_x(gray_roi, 'left')
+                avg_right_x, right_std, right_lines = self.edge_detector.calculate_average_edge_x(gray_roi, 'right')
+
+                # Adjust average edge X coordinates relative to full frame
+                snapshot.avg_left_edge_x = avg_left_x + roi_x if avg_left_x >= 0 else avg_left_x
+                snapshot.avg_right_edge_x = avg_right_x + roi_x if avg_right_x >= 0 else avg_right_x
+                snapshot.left_edge_std = left_std
+                snapshot.right_edge_std = right_std
+
+                # Populate detailed line information with adjusted coordinates
+                for x1, y1, x2, y2, length, angle, strength in left_lines:
+                    line_full = (x1 + roi_x, y1 + roi_y, x2 + roi_x, y2 + roi_y)
+                    edge_line = DetectedEdgeLine(line=line_full, length=length, angle=angle, strength=strength)
+                    snapshot.left_edge_lines.append(edge_line)
+
+                for x1, y1, x2, y2, length, angle, strength in right_lines:
+                    line_full = (x1 + roi_x, y1 + roi_y, x2 + roi_x, y2 + roi_y)
+                    edge_line = DetectedEdgeLine(line=line_full, length=length, angle=angle, strength=strength)
+                    snapshot.right_edge_lines.append(edge_line)
+
+                # --- Finalize Snapshot ---
+                end_time = time.perf_counter()
+                snapshot.processing_time_ms = (end_time - start_time) * 1000
+                logger.debug(f"ImageProcessor: Processed frame {frame_counter} in {snapshot.processing_time_ms:.2f}ms")
+                # --- Make Snapshot Available ---
+                with self._snapshot_lock:
+                    self._latest_snapshot = snapshot
+                    self._new_snapshot_available = True
+
+                # --- PERFORMANCE: Log FPS/Processing Time ---
+                if frame_counter % 30 == 0: # Log every 30 frames
+                    logger.debug(f"ImageProcessor: Frame {frame_counter} processed in {snapshot.processing_time_ms:.2f}ms.")
+
+        except Exception as e:
+            logger.error(f"ImageProcessor: Error in processing loop: {e}", exc_info=True)
+        finally:
+            logger.debug("ImageProcessor: Processing loop finished.")
+# vision/vision_snapshot.py
+
+"""
+Defines the VisionSnapshot data structure, an advanced version for robust processing.
+This structure holds detailed results of image processing for a single frame,
+providing richer information for navigation decisions.
+"""
+
+from dataclasses import dataclass, field
+from typing import Optional, Tuple, List
+import time
+
+@dataclass
+class DetectedSign:
+    """
+    Represents a detected traffic sign with detailed information.
+    """
+    # Type of sign detected
+    class SignType:
+        LEFT = "LEFT"
+        RIGHT = "RIGHT"
+        UNKNOWN = "UNKNOWN"
+
+    sign_type: str = SignType.UNKNOWN  # Use SignType.LEFT or SignType.RIGHT
+    # Bounding box (x, y, width, height) in image coordinates
+    bbox: Tuple[int, int, int, int] = field(default_factory=lambda: (0, 0, 0, 0))
+    # Confidence level of the detection (0.0 to 1.0)
+    confidence: float = 0.0
+    # Centroid (x, y) of the detection
+    centroid: Tuple[int, int] = field(default_factory=lambda: (0, 0))
+    # Area of the bounding box (width * height)
+    area: int = 0
+
+    def is_valid(self) -> bool:
+        """Check if the sign detection is considered valid (non-zero area, reasonable confidence)."""
+        return self.area > 0 and self.confidence > 0.1 # Threshold can be adjusted
+
+    def __str__(self):
+        return (f"DetectedSign(Type: {self.sign_type}, Conf: {self.confidence:.2f}, "
+                f"BBox: {self.bbox}, Centroid: {self.centroid})")
+
+@dataclass
+class DetectedEdgeLine:
+    """
+    Represents a detected line segment, typically from edge detection.
+    Using the format from cv2.HoughLinesP: [x1, y1, x2, y2]
+    """
+    # Endpoints of the line segment
+    line: Tuple[int, int, int, int] = field(default_factory=lambda: (0, 0, 0, 0))
+    # Length of the line segment
+    length: float = 0.0
+    # Angle of the line segment in radians (relative to horizontal)
+    angle: float = 0.0
+    # Confidence or strength of the line (e.g., inverse of Hough accumulator value, or based on length)
+    strength: float = 0.0 
+
+    def is_valid(self) -> bool:
+        """Check if the line detection is considered valid."""
+        return self.length > 5.0 and self.strength > 0.0 # Thresholds can be adjusted
+
+    def __str__(self):
+        return (f"DetectedEdgeLine(Line: {self.line}, Len: {self.length:.1f}, "
+                f"Angle: {self.angle:.2f}rad, Strength: {self.strength:.2f})")
+
+@dataclass
+class VisionSnapshot:
+    """
+    Advanced container for vision processing results for a single frame.
+    Provides detailed information for robust navigation decisions.
+    """
+    # --- Timestamp ---
+    timestamp: float = field(default_factory=time.time) # Time of processing
+
+    # --- Traffic Sign Detection ---
+    # Lists to hold potentially multiple detections
+    left_signs: List[DetectedSign] = field(default_factory=list)
+    right_signs: List[DetectedSign] = field(default_factory=list)
+    
+    # Convenience properties for the most likely sign (highest confidence)
+    @property
+    def primary_left_sign(self) -> Optional[DetectedSign]:
+        """Get the left sign with the highest confidence, if any."""
+        if not self.left_signs:
+            return None
+        # Filter valid signs first, then find the one with max confidence
+        valid_signs = [s for s in self.left_signs if s.is_valid()]
+        if not valid_signs:
+             return None
+        return max(valid_signs, key=lambda s: s.confidence)
+
+    @property
+    def primary_right_sign(self) -> Optional[DetectedSign]:
+        """Get the right sign with the highest confidence, if any."""
+        if not self.right_signs:
+            return None
+        valid_signs = [s for s in self.right_signs if s.is_valid()]
+        if not valid_signs:
+             return None
+        return max(valid_signs, key=lambda s: s.confidence)
+
+    # --- Track Edge Detection ---
+    # Lists of detected line segments for left and right edges
+    left_edge_lines: List[DetectedEdgeLine] = field(default_factory=list)
+    right_edge_lines: List[DetectedEdgeLine] = field(default_factory=list)
+
+    # Aggregated edge information (can be derived from lines or direct pixel analysis)
+    # Average X position of detected left/right edges within the ROI (-1.0 indicates not found reliably)
+    avg_left_edge_x: float = -1.0
+    avg_right_edge_x: float = -1.0
+    # Standard deviation or spread of edge positions (indicates confidence/track width)
+    left_edge_std: float = 0.0
+    right_edge_std: float = 0.0
+
+    # --- Frame Metadata ---
+    # Identifier for the frame (e.g., sequence number from camera)
+    frame_id: int = 0
+    # Processing time taken for this frame (ms)
+    processing_time_ms: float = 0.0
+    # ROI used for processing (if dynamic)
+    # processing_roi: Optional[Tuple[int, int, int, int]] = None # (x, y, w, h)
+
+    # --- Processing Flags ---
+    # Indicates if signs were specifically searched for in this frame
+    signs_searched: bool = False
+    # Indicates if edges were specifically searched for in this frame
+    edges_searched: bool = False
+
+    def __str__(self):
+        left_desc = f"{len(self.left_signs)} signs"
+        right_desc = f"{len(self.right_signs)} signs"
+        left_edge_desc = f"{len(self.left_edge_lines)} lines"
+        right_edge_desc = f"{len(self.right_edge_lines)} lines"
+        if self.primary_left_sign:
+            left_desc += f" (Primary: {self.primary_left_sign.sign_type}@{self.primary_left_sign.centroid})"
+        if self.primary_right_sign:
+            right_desc += f" (Primary: {self.primary_right_sign.sign_type}@{self.primary_right_sign.centroid})"
+        
+        return (f"VisionSnapshot(TS: {self.timestamp:.3f}, FID: {self.frame_id}, "
+                f"LSigns: {left_desc}, RSigns: {right_desc}, "
+                f"LEdges: {left_edge_desc} (X_avg={self.avg_left_edge_x:.1f}), "
+                f"REdges: {right_edge_desc} (X_avg={self.avg_right_edge_x:.1f}))")
+
+    def reset(self):
+        """Reset all fields to default/empty values."""
+        self.timestamp = time.time()
+        self.left_signs.clear()
+        self.right_signs.clear()
+        self.left_edge_lines.clear()
+        self.right_edge_lines.clear()
+        self.avg_left_edge_x = -1.0
+        self.avg_right_edge_x = -1.0
+        self.left_edge_std = 0.0
+        self.right_edge_std = 0.0
+        self.frame_id = 0
+        self.processing_time_ms = 0.0
+        # self.processing_roi = None
+        self.signs_searched = False
+        self.edges_searched = False
+
+    def has_sign_conflict(self) -> bool:
+        """
+        Check if there's a potential conflict (both left and right signs detected with high confidence).
+        This requires robust confidence scoring in the detection logic.
+        """
+        primary_left = self.primary_left_sign
+        primary_right = self.primary_right_sign
+        if primary_left and primary_right:
+            # Both primary signs exist and are valid
+            # Conflict if both are highly confident and reasonably close
+            # This logic can be refined
+            return (primary_left.confidence > 0.7 and primary_right.confidence > 0.7)
+        return False
+
+    def get_track_width_estimate(self) -> float:
+        """
+        Estimate the track width based on detected edges.
+        Returns -1.0 if estimation is not possible.
+        """
+        if self.avg_left_edge_x >= 0 and self.avg_right_edge_x >= 0:
+            return self.avg_right_edge_x - self.avg_left_edge_x
+        # Could also try to estimate from lines if averages are not available
+        # ...
+        return -1.0
+
+# Example usage (if run as script)
+if __name__ == "__main__":
+    # Default snapshot
+    snap1 = VisionSnapshot()
+    print("Default:", snap1)
+
+    # Snapshot with detailed data
+    left_sign = DetectedSign(
+        sign_type=DetectedSign.SignType.LEFT,
+        bbox=(50, 100, 30, 50),
+        confidence=0.95,
+        centroid=(65, 125),
+        area=1500
+    )
+    right_sign = DetectedSign(
+        sign_type=DetectedSign.SignType.RIGHT,
+        bbox=(500, 110, 25, 45),
+        confidence=0.88,
+        centroid=(512, 132),
+        area=1125
+    )
+    edge_line_left = DetectedEdgeLine(
+        line=(10, 50, 15, 200),
+        length=155.0,
+        angle=1.5, # ~90 degrees
+        strength=0.9
+    )
+    edge_line_right = DetectedEdgeLine(
+        line=(600, 40, 610, 210),
+        length=175.0,
+        angle=1.4, # ~80 degrees
+        strength=0.85
+    )
+
+    snap2 = VisionSnapshot(
+        frame_id=100,
+        left_signs=[left_sign],
+        right_signs=[right_sign],
+        left_edge_lines=[edge_line_left],
+        right_edge_lines=[edge_line_right],
+        avg_left_edge_x=12.5,
+        avg_right_edge_x=605.0,
+        left_edge_std=2.0,
+        right_edge_std=1.5,
+        signs_searched=True,
+        edges_searched=True
+    )
+    print("\nWith Data:")
+    print(snap2)
+    print(f"Primary Left Sign: {snap2.primary_left_sign}")
+    print(f"Primary Right Sign: {snap2.primary_right_sign}")
+    print(f"Has Conflict? {snap2.has_sign_conflict()}")
+    print(f"Estimated Track Width: {snap2.get_track_width_estimate():.1f}px")
+
+    # Resetting
+    snap2.reset()
+    print("\nReset:")
+    print(snap2)
+    print(f"Primary Left Sign: {snap2.primary_left_sign}")
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle_python$ cat */*/*
+cat: '*/*/*': No such file or directory
+arman@arman-HP-EliteBook-840-G5:~/arman/github/WRO_2025/coding_part/wro2025_vehicle_python$ 
+

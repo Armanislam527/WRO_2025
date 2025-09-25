@@ -9,7 +9,7 @@
 #include <termios.h> // tcgetattr, tcsetattr, cfsetispeed, cfsetospeed, tcflush
 #include <cstring>   // memset, memcpy
 #include <stdexcept> // std::runtime_error
-
+#include "../utils/logger.h"
 // Include command definitions (mirror Nano's serial_protocol.h)
 // Assuming these are defined in a common header or we define them here for now
 #ifndef CMD_SET_MOTOR_SPEED
@@ -24,11 +24,21 @@
 #endif
 
 SerialHandler::SerialHandler()
-    : serialFd(-1), isOpen(false), stopReceiving(false), sensorDataUpdated(false), rxBufferIndex(0), startAckReceived(false), currentState(ParseState::IDLE)
+    // List ALL members in the EXACT order they are declared in serial_handler.h
+    // This example assumes the order based on typical class layout and error message hints.
+    // You MUST check YOUR serial_handler.h to get the real order for ALL members.
+    : serialFd(-1), isOpen(false), stopReceiving(false),
+      // ... (other members in their declaration order) ...
+      sensorDataUpdated(false),      // 1st of the four key atomic members mentioned in error
+      rxBufferIndex(0),              // 2nd of the four key atomic members
+      startAckReceived(false),       // 3rd of the four key atomic members
+      currentState(ParseState::IDLE) // 4th of the four key atomic members
+                                     // ... (rest of members in their declaration order) ...
+//   newSensorDataAvailable(false) // Assuming this is another atomic member
 {
     resetParser();
-    // Initialize latestSensorData to zero or default values if needed
     memset(&latestSensorData, 0, sizeof(SensorData));
+    LOG_DEBUG("SerialHandler: Constructed.");
 }
 
 SerialHandler::~SerialHandler()

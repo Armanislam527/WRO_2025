@@ -17,15 +17,12 @@ public:
     // Configure HSV range for Green
     void setGreenHSVRange(cv::Scalar lower, cv::Scalar upper);
 
-    // Detect Red sign in an HSV image
-    // Returns true if a valid red sign is found
-    // centroid: Output, the center point of the detected sign
-    bool detectRedSign(const cv::Mat &hsvFrame, cv::Point &centroid);
-
-    // Detect Green sign in an HSV image
-    // Returns true if a valid green sign is found
-    // centroid: Output, the center point of the detected sign
-    bool detectGreenSign(const cv::Mat &hsvFrame, cv::Point &centroid);
+    // --- CORRECTED: Combined detection method ---
+    // Detect both Red and Green signs in an HSV image
+    // leftSign, rightSign: Output, true if sign detected
+    // leftCentroid, rightCentroid: Output, center point of detected signs (-1,-1 if not found)
+    void detectSigns(const cv::Mat &hsvFrame, bool &leftSign, bool &rightSign, cv::Point &leftCentroid, cv::Point &rightCentroid);
+    // --- END OF CORRECTION ---
 
     // --- Advanced Filtering Parameters (can be tuned) ---
     void setMinAreaThreshold(double area) { minAreaThreshold_ = area; }
