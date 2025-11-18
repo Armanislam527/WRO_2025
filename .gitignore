@@ -1,11 +1,8 @@
-rulebook/
-deepseek/
-perplexity/
+
 CURA_OUTPUT/
 .vscode/
 .idea/
 .DS_Store/
-qween/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

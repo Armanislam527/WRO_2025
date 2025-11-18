@@ -1,0 +1,19 @@
+total expense 
+pi - 3980 
+cam - 980 
+filament -2100 
+usb hub - 280 
+coil (tatal) -40 
+shouldering iron -260 
+usb hub -100 
+paper-100 
+csi port- 210 
+application fee -500 
+battery -270>rohit 
+ultrasonic -130(rohit) 
+national -1500(rohit -500) 
+ultrasonic+gluestick- 130(rohit) 
+monjur- 700 
+taka paid(cash) 
+rohit- 3400 
+labib-2500
