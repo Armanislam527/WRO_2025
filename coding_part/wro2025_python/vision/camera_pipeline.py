@@ -39,18 +39,19 @@ class OV5647Camera:
             self.picam2 = Picamera2(camera_num=0)  # Explicitly use camera 0
             
             # Create optimized configuration for competition
+            # Configure low-res RGB lores stream for direct array extraction
             self.config = self.picam2.create_video_configuration(
                 main={
-                    "size": (1296, 972),  # Use full 5MP for best quality
-                    "format": "RGB888"
+                    "size": (640, 480),
+                    "format": "YUV420"  # Keep main lightweight
                 },
                 lores={
-                    "size": (PERF.RESIZE_WIDTH, PERF.RESIZE_HEIGHT),  # Processing resolution
-                    "format": "YUV420"  # More efficient for processing
+                    "size": (PERF.RESIZE_WIDTH, PERF.RESIZE_HEIGHT),
+                    "format": "RGB888"  # Direct RGB frames for processing
                 },
-                display="lores",  # Display lower resolution to save resources
-                buffer_count=PERF.MAX_FRAME_BUFFERS,  # Minimal buffers
-                queue=False  # No frame queue to reduce latency
+                display="lores",
+                buffer_count=PERF.MAX_FRAME_BUFFERS,
+                queue=False
             )
             
             # Set competition-optimized controls
@@ -134,17 +135,15 @@ class OV5647Camera:
     def _frame_callback(self, request):
         """Callback for new frames - zero-copy processing"""
         try:
-            # Get the low-resolution frame for processing
-            buffer = request.request.buffers[1]  # lores buffer
-            frame_data = buffer.data
-            
-            # Convert YUV420 to RGB for processing
-            # This is optimized for Pi Zero 2W - uses numpy for efficiency
-            yuv_array = np.frombuffer(frame_data, dtype=np.uint8)
-            yuv_array = yuv_array.reshape((PERF.RESIZE_HEIGHT * 3 // 2, PERF.RESIZE_WIDTH))
-            
-            # Convert YUV to RGB (simplified conversion for performance)
-            rgb_frame = self._yuv420_to_rgb(yuv_array, PERF.RESIZE_WIDTH, PERF.RESIZE_HEIGHT)
+            # Get the low-resolution RGB frame safely using Picamera2 API
+            try:
+                rgb_frame = request.make_array("lores")
+            except Exception:
+                # Fallback: attempt capture_array which copies frame
+                rgb_frame = self.picam2.capture_array("lores")
+                
+            if rgb_frame is None or rgb_frame.size == 0:
+                return
             
             # Update frame statistics
             current_time = time.time()
@@ -157,36 +156,14 @@ class OV5647Camera:
             
             # Update shared frame (with simple locking)
             if not self.frame_lock:
-                self.current_frame = rgb_frame
+                # Ensure a copy to avoid holding onto internal buffers
+                self.current_frame = rgb_frame.copy()
                 self.frame_timestamp = current_time
                 
         except Exception as e:
             print(f"❌ Frame callback error: {e}")
     
-    def _yuv420_to_rgb(self, yuv_array, width, height):
-        """Optimized YUV420 to RGB conversion for Pi Zero 2W"""
-        # This is a simplified conversion for performance
-        # For competition, we can use a more accurate conversion if needed
-        
-        # Extract Y, U, V components
-        y = yuv_array[:height, :width]
-        u = yuv_array[height:height + height // 2, :width // 2]
-        v = yuv_array[height + height // 2:, :width // 2]
-        
-        # Upsample U and V to full resolution
-        u_upsampled = np.repeat(np.repeat(u, 2, axis=0), 2, axis=1)
-        v_upsampled = np.repeat(np.repeat(v, 2, axis=0), 2, axis=1)
-        
-        # Convert to RGB (simplified matrix multiplication)
-        r = y + 1.402 * (v_upsampled - 128)
-        g = y - 0.344136 * (u_upsampled - 128) - 0.714136 * (v_upsampled - 128)
-        b = y + 1.772 * (u_upsampled - 128)
-        
-        # Stack channels and clamp values
-        rgb = np.stack([r, g, b], axis=2)
-        rgb = np.clip(rgb, 0, 255).astype(np.uint8)
-        
-        return rgb
+    # Removed manual YUV conversion; using Picamera2-provided RGB lores frames
     
     def cleanup(self):
         """Cleanup camera resources"""

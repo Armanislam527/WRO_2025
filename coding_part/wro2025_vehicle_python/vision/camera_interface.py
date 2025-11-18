@@ -38,9 +38,12 @@ class CameraInterface:
         fps = max(1, int(getattr(cfg, 'CAMERA_FPS', 10)))
 
         # Use camera_auto_detect=1 from firmware config; do not force camera-name
+        # Low-latency pipeline: add leaky queue and appsink drop to avoid backlog on Pi Zero 2 W
         pipeline = (
             f"libcamerasrc ! video/x-raw,width={width},height={height},framerate={fps}/1 ! "
-            "videoconvert ! appsink"
+            "videoconvert ! video/x-raw,format=RGB ! "
+            "queue leaky=downstream max-size-buffers=1 ! "
+            "appsink drop=true max-buffers=1 sync=false"
         )
 
         for attempt in range(3):
@@ -74,11 +77,30 @@ class CameraInterface:
         return self.is_capturing
 
     def _capture_loop(self):
+        consecutive_failures = 0
         while self.is_capturing and self.cap:
             ret, frame = self.cap.read()
             if not ret or frame is None or frame.size == 0:
                 logger.warning("CameraInterface: Failed to capture frame.")
-                time.sleep(0.1)
+                consecutive_failures += 1
+                # Backoff a little on repeated failures to reduce CPU load
+                time.sleep(min(0.2, 0.02 * consecutive_failures))
+                # If too many consecutive failures, try to reinitialize the capture
+                if consecutive_failures >= 25:
+                    logger.error("CameraInterface: Too many capture failures, attempting to reinitialize camera.")
+                    try:
+                        if self.cap:
+                            self.cap.release()
+                        self.cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+                        consecutive_failures = 0
+                        if not self.cap.isOpened():
+                            logger.error("CameraInterface: Reinitialize failed, stopping capture.")
+                            self.is_capturing = False
+                            break
+                    except Exception as e:
+                        logger.error(f"CameraInterface: Exception during reinitialize: {e}")
+                        self.is_capturing = False
+                        break
                 continue
 
             # Encode as JPEG to reduce size across threads
@@ -89,7 +111,8 @@ class CameraInterface:
             else:
                 logger.debug("CameraInterface: JPEG encode failed, skipping frame.")
 
-            time.sleep(0.1)  # ~10 FPS
+            consecutive_failures = 0
+            time.sleep(0.08)  # target ~10-12 FPS
 
 
 if __name__ == "__main__":
